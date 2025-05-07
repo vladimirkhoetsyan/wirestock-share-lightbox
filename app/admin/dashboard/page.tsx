@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { type Lightbox, mockLightboxes } from "@/lib/mock-data"
 import { Edit, Trash2, Plus, ImageIcon, Video, Share2 } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 
 export default function DashboardPage() {

@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 import { Eye, EyeOff, LogIn } from "lucide-react"
 
@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [shake, setShake] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -33,17 +34,21 @@ export default function LoginPage() {
         })
         router.push("/admin/dashboard")
       } else {
+        setShake(true)
         toast({
           title: "Login failed",
           description: "Invalid email or password",
           variant: "destructive",
+          duration: 6000,
         })
       }
     } catch (error) {
+      setShake(true)
       toast({
         title: "Login error",
         description: "An error occurred during login",
         variant: "destructive",
+        duration: 6000,
       })
     } finally {
       setIsLoading(false)
@@ -54,8 +59,9 @@ export default function LoginPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-[#0a0a0c]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        animate={shake ? { x: [0, -16, 16, -12, 12, -8, 8, 0], opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+        transition={{ duration: shake ? 0.6 : 0.5 }}
+        onAnimationComplete={() => setShake(false)}
         className="w-full max-w-md"
       >
         <div className="mb-8 text-center">
@@ -104,7 +110,6 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Hint: Use admin@example.com / password123</p>
             </div>
 
             <Button

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { type Lightbox, mockLightboxes } from "@/lib/mock-data"
 import { Play, Lock, ArrowLeft, Eye } from "lucide-react"
 import MediaPreviewModal from "@/components/media-preview-modal"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 
 export default function SharePage() {
