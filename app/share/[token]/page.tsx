@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +12,8 @@ import MediaPreviewModal from "@/components/media-preview-modal"
 import { useToast } from "@/components/ui/use-toast"
 import { motion } from "framer-motion"
 
-export default function SharePage({ params }: { params: { token: string } }) {
+export default function SharePage() {
+  const params = useParams();
   const [lightbox, setLightbox] = useState<Lightbox | null>(null)
   const [shareLink, setShareLink] = useState<any>(null)
   const [password, setPassword] = useState("")

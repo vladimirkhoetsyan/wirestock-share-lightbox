@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import ProtectedRoute from "@/components/protected-route"
 import ModernHeader from "@/components/modern-header"
 import { Button } from "@/components/ui/button"
@@ -52,7 +52,8 @@ import MediaPreviewModal from "@/components/media-preview-modal"
 // Number of items to load per page
 const ITEMS_PER_PAGE = 10
 
-export default function LightboxEditPage({ params }: { params: { id: string } }) {
+export default function LightboxEditPage() {
+  const params = useParams();
   const [lightbox, setLightbox] = useState<Lightbox | null>(null)
   const [newMediaUrl, setNewMediaUrl] = useState("")
   const [newShareName, setNewShareName] = useState("")
