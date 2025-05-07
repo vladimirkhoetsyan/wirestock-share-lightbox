@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { parse } from 'csv-parse/sync';
 
 // POST /api/lightboxes/[id]/import-csv
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, contextPromise: Promise<{ params: { id: string } }>) {
+  const { params } = await contextPromise;
   const lightboxId = params.id;
   const csvText = await req.text();
 

@@ -1,0 +1,3 @@
+s3_uri,media_type,duration_seconds,dimensions,order
+s3://bucket/file1.jpg,image,10,1920x1080,1
+s3://bucket/file2.mp4,video,120,1920x1080,2
