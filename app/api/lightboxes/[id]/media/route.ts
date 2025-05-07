@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { verifyJwt } from 'lib/auth-server';
+import { getSignedS3Url } from 'lib/s3';
 
 // GET /api/lightboxes/[id]/media
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
@@ -46,15 +47,23 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       take: limit,
     });
   }
-  return NextResponse.json(items.map((item: any) => ({
-    id: item.id,
-    s3_uri: item.s3_uri,
-    media_type: item.media_type,
-    duration_seconds: item.duration_seconds,
-    dimensions: item.dimensions,
-    order: item.order,
-    createdAt: item.created_at,
-  })));
+  // Only return signedUrl, not s3_uri
+  const result = await Promise.all(items.map(async (item: any) => {
+    let signedUrl = null;
+    try {
+      signedUrl = await getSignedS3Url(item.s3_uri);
+    } catch (e) {}
+    return {
+      id: item.id,
+      signedUrl,
+      media_type: item.media_type,
+      duration_seconds: item.duration_seconds,
+      dimensions: item.dimensions,
+      order: item.order,
+      createdAt: item.created_at,
+    };
+  }));
+  return NextResponse.json(result);
 }
 
 // POST /api/lightboxes/[id]/media
