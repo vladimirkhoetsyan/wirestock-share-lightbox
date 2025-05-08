@@ -689,76 +689,87 @@ export default function LightboxEditPage() {
                                   <Draggable key={item.id} draggableId={item.id} index={index}>
                                     {(provided) => (
                                       <div
-                                        ref={index === displayedMediaItems.length - 1
-                                          ? combineRefs(provided.innerRef, lastItemRef)
-                                          : provided.innerRef}
+                                        ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
-                                        className="flex items-center gap-4 p-4 glass-card rounded-xl"
+                                        className="glass-card rounded-xl flex relative overflow-hidden"
                                       >
-                                        <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0">
-                                          <img
-                                            src={item.signedUrl || item.thumbnailUrl || "/placeholder.svg"}
-                                            alt={item.title}
-                                            className="w-full h-full object-cover"
-                                          />
-                                          {item.type === "video" && (
-                                            <div className="relative w-8 h-8 bg-black/50 rounded-full flex items-center justify-center -mt-12 mx-auto">
-                                              <div className="w-0 h-0 border-t-4 border-t-transparent border-l-8 border-l-white border-b-4 border-b-transparent ml-1"></div>
-                                            </div>
-                                          )}
-                                        </div>
-                                        <div className="flex-grow min-w-0">
-                                          <p className="font-medium truncate text-white">{item.title}</p>
-                                          <p className="text-sm text-gray-400 truncate">{item.url}</p>
-                                          <Badge
-                                            variant="outline"
-                                            className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
-                                          >
-                                            {item.type === "image" ? (
-                                              <ImageIcon className="h-3 w-3" />
-                                            ) : (
-                                              <Video className="h-3 w-3" />
+                                        {/* Glassmorphism overlay */}
+                                        <div
+                                          style={{
+                                            position: "absolute",
+                                            inset: 0,
+                                            zIndex: 0,
+                                            pointerEvents: "none",
+                                            backdropFilter: "blur(12px)",
+                                            WebkitBackdropFilter: "blur(12px)",
+                                          }}
+                                        />
+                                        <div className="p-4 flex items-center gap-4 w-full relative z-10">
+                                          <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0">
+                                            <img
+                                              src={item.signedUrl || item.thumbnailUrl || "/placeholder.svg"}
+                                              alt={item.title}
+                                              className="w-full h-full object-cover"
+                                            />
+                                            {item.type === "video" && (
+                                              <div className="relative w-8 h-8 bg-black/50 rounded-full flex items-center justify-center -mt-12 mx-auto">
+                                                <div className="w-0 h-0 border-t-4 border-t-transparent border-l-8 border-l-white border-b-4 border-b-transparent ml-1"></div>
+                                              </div>
                                             )}
-                                            {item.type}
-                                          </Badge>
-                                        </div>
-                                        <div className="flex gap-1">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleOpenPreview(index)}
-                                            className="text-gray-400 hover:text-white hover:bg-white/10"
-                                            title="Preview"
-                                          >
-                                            <Maximize className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleMoveMedia(item.id, "up")}
-                                            disabled={index === 0 || isSavingOrder}
-                                            className="text-gray-400 hover:text-white hover:bg-white/10"
-                                          >
-                                            <MoveUp className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleMoveMedia(item.id, "down")}
-                                            disabled={index === displayedMediaItems.length - 1 && !hasMore || isSavingOrder}
-                                            className="text-gray-400 hover:text-white hover:bg-white/10"
-                                          >
-                                            <MoveDown className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleDeleteMedia(item.id)}
-                                            className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
+                                          </div>
+                                          <div className="flex-grow min-w-0">
+                                            <p className="font-medium truncate text-white">{item.title}</p>
+                                            <p className="text-sm text-gray-400 truncate">{item.url}</p>
+                                            <Badge
+                                              variant="outline"
+                                              className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
+                                            >
+                                              {item.type === "image" ? (
+                                                <ImageIcon className="h-3 w-3" />
+                                              ) : (
+                                                <Video className="h-3 w-3" />
+                                              )}
+                                              {item.type}
+                                            </Badge>
+                                          </div>
+                                          <div className="flex gap-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => handleOpenPreview(index)}
+                                              className="text-gray-400 hover:text-white hover:bg-white/10"
+                                              title="Preview"
+                                            >
+                                              <Maximize className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => handleMoveMedia(item.id, "up")}
+                                              disabled={index === 0 || isSavingOrder}
+                                              className="text-gray-400 hover:text-white hover:bg-white/10"
+                                            >
+                                              <MoveUp className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => handleMoveMedia(item.id, "down")}
+                                              disabled={index === displayedMediaItems.length - 1 && !hasMore || isSavingOrder}
+                                              className="text-gray-400 hover:text-white hover:bg-white/10"
+                                            >
+                                              <MoveDown className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => handleDeleteMedia(item.id)}
+                                              className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
                                         </div>
                                       </div>
                                     )}
@@ -783,6 +794,10 @@ export default function LightboxEditPage() {
                                     Load More
                                   </Button>
                                 </div>
+                              )}
+
+                              {displayedMediaItems.length > 0 && (
+                                <div ref={lastItemRef} style={{ height: 1 }} />
                               )}
                             </div>
                           )}

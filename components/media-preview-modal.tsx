@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import type { MediaItem } from "@/lib/mock-data"
 import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, X } from "lucide-react"
@@ -106,6 +106,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-6xl w-full p-0 bg-black/95 text-white overflow-hidden border-none rounded-xl">
+        <DialogTitle className="sr-only">{currentItem.title || "Media Preview"}</DialogTitle>
         <div className="relative flex flex-col h-[85vh]">
           {/* Close button */}
           <Button
