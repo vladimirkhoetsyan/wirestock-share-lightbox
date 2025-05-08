@@ -195,11 +195,11 @@ export default function DashboardPage() {
                         <div className="flex gap-6 text-sm text-gray-300">
                           <div className="flex items-center gap-1">
                             <ImageIcon className="h-4 w-4" />
-                            <span>{lightbox.mediaItems?.length} items</span>
+                            <span>{lightbox.mediaItemCount} items</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Share2 className="h-4 w-4" />
-                            <span>{lightbox.shareLinks?.length} shares</span>
+                            <span>{lightbox.shareLinkCount} shares</span>
                           </div>
                         </div>
                       </div>

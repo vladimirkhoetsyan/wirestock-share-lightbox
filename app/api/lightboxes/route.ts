@@ -17,6 +17,14 @@ export async function GET(req: NextRequest) {
   const lightboxes = await prisma.lightboxes.findMany({
     where: { /* Add user scoping if needed */ },
     orderBy: { created_at: 'desc' },
+    include: {
+      _count: {
+        select: {
+          media_items: true,
+          share_links: { where: { revoked: false } }
+        }
+      }
+    }
   });
   return NextResponse.json(lightboxes.map((lb: any) => ({
     id: lb.id,
@@ -25,6 +33,8 @@ export async function GET(req: NextRequest) {
     types: lb.types,
     keywords: lb.keywords,
     createdAt: lb.created_at,
+    mediaItemCount: lb._count.media_items,
+    shareLinkCount: lb._count.share_links,
   })));
 }
 
