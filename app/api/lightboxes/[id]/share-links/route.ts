@@ -25,7 +25,11 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       name: link.name,
       isPasswordProtected: !!link.password_hash,
       createdAt: link.created_at,
-      // Analytics can be expanded here if needed
+      analytics: {
+        totalViews: link.analytics?.totalViews ?? 0,
+        mediaInteractions: link.analytics?.mediaInteractions ?? 0,
+        timeSpentPerMedia: link.analytics?.timeSpentPerMedia ?? 0,
+      },
     }))
   );
 }
@@ -66,5 +70,10 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     name: newLink.name,
     isPasswordProtected: !!newLink.password_hash,
     createdAt: newLink.created_at,
+    analytics: {
+      totalViews: 0,
+      mediaInteractions: 0,
+      timeSpentPerMedia: 0,
+    },
   });
 } 

@@ -11,7 +11,11 @@ export async function comparePassword(password: string, hash: string): Promise<b
   return bcrypt.compare(password, hash);
 }
 
-export function signJwt(payload: object): string {
+export function signJwt(payload: any): string {
+  // If payload already has exp, don't set expiresIn
+  if (payload && payload.exp) {
+    return jwt.sign(payload, JWT_SECRET);
+  }
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
 

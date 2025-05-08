@@ -20,13 +20,16 @@ export async function GET(req: NextRequest, contextPromise: Promise<{ params: { 
     return NextResponse.json({ error: 'Share link not found or revoked' }, { status: 404 });
   }
   return NextResponse.json({
-    ...shareLink.lightboxes,
-    shareLink: {
-      id: shareLink.id,
-      token: shareLink.token,
-      name: shareLink.name,
-      isPasswordProtected: !!shareLink.password_hash,
-      createdAt: shareLink.created_at,
+    id: shareLink.id,
+    token: shareLink.token,
+    name: shareLink.name,
+    lightbox_id: shareLink.lightbox_id,
+    isPasswordProtected: !!shareLink.password_hash,
+    createdAt: shareLink.created_at,
+    analytics: {
+      totalViews: shareLink.analytics?.totalViews ?? 0,
+      mediaInteractions: shareLink.analytics?.mediaInteractions ?? 0,
+      timeSpentPerMedia: shareLink.analytics?.timeSpentPerMedia ?? 0,
     },
   });
 } 

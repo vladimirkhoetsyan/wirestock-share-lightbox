@@ -127,6 +127,53 @@ async function persistMediaOrder(lightboxId: string, orderedItems: MediaItem[], 
   return res.json()
 }
 
+// API helpers for share links
+async function fetchShareLinks(lightboxId: string, token: string) {
+  const res = await fetch(`/api/lightboxes/${lightboxId}/share-links`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to fetch share links")
+  return res.json()
+}
+
+async function createShareLink(lightboxId: string, data: any, token: string) {
+  const res = await fetch(`/api/lightboxes/${lightboxId}/share-links`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("Failed to create share link")
+  return res.json()
+}
+
+async function revokeShareLink(shareLinkId: string, token: string) {
+  const res = await fetch(`/api/share-links/by-id/${shareLinkId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to revoke share link")
+  return res.json()
+}
+
+async function getShareLinkByToken(token: string) {
+  const res = await fetch(`/api/share-links/by-token/${token}`)
+  if (!res.ok) throw new Error("Failed to get share link by token")
+  return res.json()
+}
+
+async function validateShareLink(data: { token: string; password?: string }) {
+  const res = await fetch(`/api/share-links/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("Failed to validate share link")
+  return res.json()
+}
+
 function combineRefs(...refs: any[]) {
   return (node: any) => {
     refs.forEach(ref => {
@@ -162,6 +209,7 @@ export default function LightboxEditPage() {
   const { toast } = useToast()
   // Add a new state for saving order
   const [isSavingOrder, setIsSavingOrder] = useState(false)
+  const [isCreateShareDialogOpen, setIsCreateShareDialogOpen] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -172,13 +220,18 @@ export default function LightboxEditPage() {
         setLightbox(data)
         setSelectedTypes(data.types)
         setKeywords(data.keywords.join(", "))
-        // Fetch media items from backend
         fetchMediaItems(id, token)
           .then((media) => {
             setDisplayedMediaItems(media)
             setHasMore(media.length > ITEMS_PER_PAGE)
           })
           .catch(() => toast({ title: "Error", description: "Failed to load media items", variant: "destructive" }))
+        // Fetch share links
+        fetchShareLinks(id, token)
+          .then((links) => {
+            setLightbox((prev: any) => ({ ...prev, shareLinks: links }))
+          })
+          .catch(() => toast({ title: "Error", description: "Failed to load share links", variant: "destructive" }))
       })
       .catch(() => toast({ title: "Error", description: "Failed to load lightbox", variant: "destructive" }))
       .finally(() => setIsLoading(false))
@@ -429,7 +482,7 @@ export default function LightboxEditPage() {
     }
   }
 
-  const handleCreateShareLink = () => {
+  const handleCreateShareLink = async () => {
     if (!newShareName.trim() || !lightbox) {
       toast({
         title: "Error",
@@ -438,49 +491,45 @@ export default function LightboxEditPage() {
       })
       return
     }
-
-    const token = `${lightbox.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`
-    const newShareLink: ShareLink = {
-      id: `share-${Date.now()}`,
-      token,
-      name: newShareName,
-      isPasswordProtected,
-      password: isPasswordProtected ? newSharePassword : undefined,
-      createdAt: new Date().toISOString(),
-      analytics: {
-        totalViews: 0,
-        mediaInteractions: 0,
-        timeSpentPerMedia: 0,
-      },
+    const token = localStorage.getItem("token")
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
+    if (!token || !id) return
+    try {
+      await createShareLink(id, {
+        name: newShareName,
+        isPasswordProtected,
+        password: isPasswordProtected ? newSharePassword : undefined,
+      }, token)
+      // Refresh share links
+      const links = await fetchShareLinks(id, token)
+      setLightbox((prev: any) => ({ ...prev, shareLinks: links }))
+      setNewShareName("")
+      setNewSharePassword("")
+      setIsPasswordProtected(false)
+      toast({
+        title: "Share link created",
+        description: "New share link has been created successfully",
+      })
+    } catch {
+      toast({ title: "Error", description: "Failed to create share link", variant: "destructive" })
     }
-
-    setLightbox({
-      ...lightbox,
-      shareLinks: [...lightbox.shareLinks, newShareLink],
-    })
-
-    setNewShareName("")
-    setNewSharePassword("")
-    setIsPasswordProtected(false)
-
-    toast({
-      title: "Share link created",
-      description: "New share link has been created successfully",
-    })
   }
 
-  const handleRevokeShareLink = (id: string) => {
-    if (!lightbox) return
-
-    setLightbox({
-      ...lightbox,
-      shareLinks: lightbox.shareLinks.filter((link: any) => link.id !== id),
-    })
-
-    toast({
-      title: "Share link revoked",
-      description: "Share link has been revoked successfully",
-    })
+  const handleRevokeShareLink = async (id: string) => {
+    const token = localStorage.getItem("token")
+    if (!token || !lightbox) return
+    try {
+      await revokeShareLink(id, token)
+      // Refresh share links
+      const links = await fetchShareLinks(lightbox.id, token)
+      setLightbox((prev: any) => ({ ...prev, shareLinks: links }))
+      toast({
+        title: "Share link revoked",
+        description: "Share link has been revoked successfully",
+      })
+    } catch {
+      toast({ title: "Error", description: "Failed to revoke share link", variant: "destructive" })
+    }
   }
 
   const handleTypeToggle = (type: MediaType) => {
@@ -810,7 +859,7 @@ export default function LightboxEditPage() {
                     <div className="glass-card rounded-xl p-6">
                       <h2 className="text-xl font-bold mb-4 text-white">Share Links</h2>
 
-                      <Dialog>
+                      <Dialog open={isCreateShareDialogOpen} onOpenChange={setIsCreateShareDialogOpen}>
                         <DialogTrigger asChild>
                           <Button className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
                             <Plus className="mr-2 h-4 w-4" />
@@ -864,7 +913,10 @@ export default function LightboxEditPage() {
                           </div>
                           <DialogFooter>
                             <Button
-                              onClick={handleCreateShareLink}
+                              onClick={async () => {
+                                await handleCreateShareLink();
+                                setIsCreateShareDialogOpen(false);
+                              }}
                               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
                             >
                               Create Link
@@ -919,7 +971,7 @@ export default function LightboxEditPage() {
                                     </div>
                                     <div>
                                       <p className="text-sm text-gray-400">Views</p>
-                                      <p className="font-medium text-white">{link.analytics.totalViews}</p>
+                                      <p className="font-medium text-white">{link.analytics?.totalViews ?? 0}</p>
                                     </div>
                                   </div>
 
@@ -929,7 +981,7 @@ export default function LightboxEditPage() {
                                     </div>
                                     <div>
                                       <p className="text-sm text-gray-400">Interactions</p>
-                                      <p className="font-medium text-white">{link.analytics.mediaInteractions}</p>
+                                      <p className="font-medium text-white">{link.analytics?.mediaInteractions ?? 0}</p>
                                     </div>
                                   </div>
 
@@ -940,7 +992,7 @@ export default function LightboxEditPage() {
                                     <div>
                                       <p className="text-sm text-gray-400">Avg. Time</p>
                                       <p className="font-medium text-white">
-                                        {link.analytics.timeSpentPerMedia}s per item
+                                        {link.analytics?.timeSpentPerMedia ?? 0}s per item
                                       </p>
                                     </div>
                                   </div>

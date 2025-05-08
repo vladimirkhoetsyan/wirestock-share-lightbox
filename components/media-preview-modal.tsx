@@ -105,9 +105,9 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-6xl w-full p-0 bg-black/95 text-white overflow-hidden border-none rounded-xl">
+      <DialogContent className="max-w-[98vw] w-full max-h-screen p-0 bg-black/95 text-white overflow-auto border-none rounded-xl">
         <DialogTitle className="sr-only">{currentItem.title || "Media Preview"}</DialogTitle>
-        <div className="relative flex flex-col h-[85vh]">
+        <div className="relative flex flex-col w-full max-h-screen min-h-[60vh]">
           {/* Close button */}
           <Button
             variant="ghost"
@@ -119,7 +119,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
           </Button>
 
           {/* Media display */}
-          <div className="flex-grow flex items-center justify-center p-4 relative">
+          <div className="flex-grow flex items-center justify-center p-4 relative w-full max-h-screen">
             <AnimatePresence mode="wait">
               {isLoading ? (
                 <motion.div
@@ -140,7 +140,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   transition={{ duration: 0.3 }}
                   src={currentItem.signedUrl || currentItem.thumbnailUrl || "/placeholder.svg"}
                   alt={currentItem.title}
-                  className="max-h-full max-w-full object-contain"
+                  className="max-h-screen max-w-full w-auto h-auto object-contain"
                 />
               ) : (
                 <motion.div
@@ -154,18 +154,8 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   <img
                     src={currentItem.signedUrl || currentItem.thumbnailUrl || "/placeholder.svg"}
                     alt={currentItem.title}
-                    className="max-h-full max-w-full object-contain"
+                    className="max-h-screen max-w-full w-auto h-auto object-contain"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-20 w-20 rounded-full bg-black/50 text-white hover:bg-black/70"
-                      onClick={togglePlay}
-                    >
-                      {!isPlaying ? <Play className="h-10 w-10" /> : <Pause className="h-10 w-10" />}
-                    </Button>
-                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -189,51 +179,8 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
             </Button>
           </div>
 
-          {/* Controls */}
-          <div className="p-6 bg-black/90 backdrop-blur-md">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-medium">{currentItem.title}</h3>
-                <p className="text-sm text-gray-400">{currentItem.description}</p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {currentItem.type === "video" && (
-                  <div className="flex items-center gap-3 mr-4">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={toggleMute}>
-                      {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                    </Button>
-                    <span className="text-sm font-mono">
-                      {formatTime(currentTime)} / {formatTime(duration)}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={handlePrevious}>
-                    <ChevronLeft className="h-6 w-6" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={handleNext}>
-                    <ChevronRight className="h-6 w-6" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {currentItem.type === "video" && (
-              <div className="mt-4">
-                <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-full"
-                    style={{ width: `${(currentTime / duration) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Navigation indicators */}
-          <div className="absolute bottom-24 left-0 right-0 flex justify-center gap-1 p-2">
+          {/* Navigation indicators - always at the bottom */}
+          <div className="absolute left-0 right-0 bottom-0 flex justify-center gap-1 p-2 z-20">
             {mediaItems.map((_, index) => (
               <button
                 key={index}

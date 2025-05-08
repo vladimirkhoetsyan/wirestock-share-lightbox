@@ -6,7 +6,6 @@ import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { type Lightbox, mockLightboxes } from "@/lib/mock-data"
 import { Play, Lock, ArrowLeft, Eye } from "lucide-react"
 import MediaPreviewModal from "@/components/media-preview-modal"
 import { useToast } from "@/hooks/use-toast"
@@ -14,7 +13,7 @@ import { motion } from "framer-motion"
 
 export default function SharePage() {
   const params = useParams();
-  const [lightbox, setLightbox] = useState<Lightbox | null>(null)
+  const [lightbox, setLightbox] = useState<any>(null)
   const [shareLink, setShareLink] = useState<any>(null)
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -24,67 +23,106 @@ export default function SharePage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const [shakePassword, setShakePassword] = useState(false)
 
+  // Fetch share link and lightbox from backend
   useEffect(() => {
-    // Find the lightbox that contains the share link with the given token
-    const timer = setTimeout(() => {
-      for (const lb of mockLightboxes) {
-        const link = lb.shareLinks.find((link) => link.token === params.token)
-        if (link) {
-          setLightbox(lb)
-          setShareLink(link)
-
-          // If the share link is not password protected, authenticate immediately
-          if (!link.isPasswordProtected) {
-            setIsAuthenticated(true)
+    const fetchShareData = async () => {
+      setIsLoading(true)
+      try {
+        const token = params.token as string
+        // Fetch share link details
+        const linkRes = await fetch(`/api/share-links/by-token/${encodeURIComponent(token)}`)
+        if (!linkRes.ok) throw new Error("Share link not found")
+        const link = await linkRes.json()
+        setShareLink(link)
+        // Check for access token in localStorage
+        let accessToken = null
+        let isValidToken = false
+        if (link.isPasswordProtected) {
+          accessToken = localStorage.getItem(`share_access_${link.token}`)
+          if (accessToken) {
+            try {
+              // Decode JWT to check expiry (exp is in seconds)
+              const payload = JSON.parse(atob(accessToken.split('.')[1]))
+              if (payload.exp && Date.now() / 1000 < payload.exp) {
+                isValidToken = true
+                setIsAuthenticated(true)
+              }
+            } catch {}
           }
-
-          // Mock analytics update
-          link.analytics.totalViews += 1
-          break
+        } else {
+          setIsAuthenticated(true)
         }
+        // Only fetch lightbox if not protected, or if authenticated
+        if (!link.isPasswordProtected || isValidToken) {
+          const lbRes = await fetch(`/api/public/lightboxes/${link.lightbox_id}?shareToken=${encodeURIComponent(link.token)}`, {
+            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          })
+          if (!lbRes.ok) throw new Error("Lightbox not found")
+          const lb = await lbRes.json()
+          setLightbox(lb)
+        } else {
+          setLightbox(null)
+        }
+      } catch (err) {
+        setShareLink(null)
+        setLightbox(null)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
+    }
+    fetchShareData()
   }, [params.token])
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsAuthenticating(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      if (password === shareLink.password) {
+    try {
+      const res = await fetch("/api/share-links/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: shareLink.token, password }),
+      })
+      if (res.ok) {
+        const data = await res.json()
         setIsAuthenticated(true)
-        toast({
-          title: "Access granted",
-          description: "You now have access to the lightbox",
+        if (data.accessToken) {
+          localStorage.setItem(`share_access_${shareLink.token}`, data.accessToken)
+        }
+        toast({ title: "Access granted", description: "You now have access to the lightbox" })
+        const lbRes = await fetch(`/api/public/lightboxes/${shareLink.lightbox_id}?shareToken=${encodeURIComponent(shareLink.token)}`, {
+          headers: { Authorization: `Bearer ${data.accessToken}` },
         })
+        if (lbRes.ok) {
+          const lb = await lbRes.json()
+          setLightbox(lb)
+        }
       } else {
-        toast({
-          title: "Incorrect password",
-          description: "Please try again with the correct password",
-          variant: "destructive",
-        })
+        toast({ title: "Incorrect password", description: "Please try again with the correct password", variant: "destructive" })
+        setShakePassword(true)
       }
+    } finally {
       setIsAuthenticating(false)
-    }, 1000)
+    }
   }
 
-  const handleMediaClick = (index: number) => {
+  const handleMediaClick = (index: any) => {
     setSelectedMediaIndex(index)
     setIsPreviewOpen(true)
-
-    // Mock analytics update
-    if (shareLink) {
-      shareLink.analytics.mediaInteractions += 1
-    }
   }
 
   const handleClosePreview = () => {
     setIsPreviewOpen(false)
+  }
+
+  // Logout handler for password-protected lightboxes
+  const handleLogout = () => {
+    if (shareLink && shareLink.isPasswordProtected) {
+      localStorage.removeItem(`share_access_${shareLink.token}`)
+      setIsAuthenticated(false)
+      setLightbox(null)
+    }
   }
 
   if (isLoading) {
@@ -95,25 +133,8 @@ export default function SharePage() {
     )
   }
 
-  if (!lightbox || !shareLink) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0c] p-4">
-        <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
-          <Lock className="h-8 w-8 text-red-400" />
-        </div>
-        <h1 className="text-2xl font-bold mb-2 text-white">Share link not found</h1>
-        <p className="text-gray-400 mb-6 text-center">This share link may have been revoked or does not exist.</p>
-        <Button asChild className="bg-white/10 hover:bg-white/20 text-white">
-          <a href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Return Home
-          </a>
-        </Button>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated && shareLink.isPasswordProtected) {
+  // Show password prompt if shareLink exists, is password protected, and not authenticated
+  if (shareLink && shareLink.isPasswordProtected && !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c] p-4">
         <motion.div
@@ -122,7 +143,12 @@ export default function SharePage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <div className="glass-card rounded-xl p-8">
+          <motion.div
+            className="glass-card rounded-xl p-8"
+            animate={shakePassword ? { x: [0, -10, 10, -10, 10, 0] } : {}}
+            transition={{ duration: 0.4 }}
+            onAnimationComplete={() => setShakePassword(false)}
+          >
             <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-6">
               <Lock className="h-8 w-8 text-blue-400" />
             </div>
@@ -183,8 +209,36 @@ export default function SharePage() {
                 </Button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </motion.div>
+      </div>
+    )
+  }
+
+  // Show error only if shareLink is null
+  if (!shareLink) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0c] p-4">
+        <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+          <Lock className="h-8 w-8 text-red-400" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2 text-white">Share link not found</h1>
+        <p className="text-gray-400 mb-6 text-center">This share link may have been revoked or does not exist.</p>
+        <Button asChild className="bg-white/10 hover:bg-white/20 text-white">
+          <a href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Return Home
+          </a>
+        </Button>
+      </div>
+    )
+  }
+
+  // If lightbox is not loaded yet, show spinner or nothing
+  if (!lightbox) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c]">
+        <div className="w-12 h-12 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin"></div>
       </div>
     )
   }
@@ -198,9 +252,21 @@ export default function SharePage() {
               <h1 className="text-2xl font-bold text-white">{lightbox.name}</h1>
               <p className="text-gray-400">{lightbox.description}</p>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
-              <Eye className="h-4 w-4" />
-              <span className="text-sm">{shareLink.analytics.totalViews} views</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-gray-400">
+                <Eye className="h-4 w-4" />
+                <span className="text-sm">{shareLink.analytics.totalViews} views</span>
+              </div>
+              {/* Logout button for password-protected lightboxes */}
+              {shareLink.isPasswordProtected && (
+                <Button
+                  variant="outline"
+                  className="ml-4 text-white border-white/20 hover:bg-white/10"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -208,7 +274,7 @@ export default function SharePage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="media-grid">
-          {lightbox.mediaItems.map((item, index) => (
+          {lightbox.mediaItems.map((item: any, index: any) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 20 }}
@@ -217,7 +283,7 @@ export default function SharePage() {
               className="media-item"
               onClick={() => handleMediaClick(index)}
             >
-              <img src={item.thumbnailUrl || "/placeholder.svg"} alt={item.title} />
+              <img src={item.signedUrl || item.thumbnailUrl || "/placeholder.svg"} alt={item.title} />
               {item.type === "video" && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
