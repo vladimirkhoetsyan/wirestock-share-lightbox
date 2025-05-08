@@ -113,6 +113,20 @@ async function deleteMediaItem(mediaId: string, token: string) {
   return res.json()
 }
 
+// Add a helper to persist the new order to the backend
+async function persistMediaOrder(lightboxId: string, orderedItems: MediaItem[], token: string) {
+  const res = await fetch(`/api/lightboxes/${lightboxId}/media/reorder`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ order: orderedItems.map(item => item.id) }),
+  })
+  if (!res.ok) throw new Error("Failed to persist media order")
+  return res.json()
+}
+
 function combineRefs(...refs: any[]) {
   return (node: any) => {
     refs.forEach(ref => {
@@ -146,6 +160,8 @@ export default function LightboxEditPage() {
   const observer = useRef<IntersectionObserver | null>(null)
   const router = useRouter()
   const { toast } = useToast()
+  // Add a new state for saving order
+  const [isSavingOrder, setIsSavingOrder] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -336,65 +352,81 @@ export default function LightboxEditPage() {
     }
   }
 
-  const handleMoveMedia = (id: string, direction: "up" | "down") => {
-    if (!lightbox) return
-
+  const handleMoveMedia = async (id: string, direction: "up" | "down") => {
+    if (!lightbox || !Array.isArray(lightbox.mediaItems)) {
+      return;
+    }
+    const token = localStorage.getItem("token")
     const allItems = [...lightbox.mediaItems]
     const index = allItems.findIndex((item) => item.id === id)
     if ((direction === "up" && index === 0) || (direction === "down" && index === allItems.length - 1)) {
-      return
+      return;
     }
-
     const newIndex = direction === "up" ? index - 1 : index + 1
     const [removed] = allItems.splice(index, 1)
     allItems.splice(newIndex, 0, removed)
-
-    setLightbox({
-      ...lightbox,
-      mediaItems: allItems,
-    })
-
+    setLightbox((prev: any) => {
+      const updated = { ...prev, mediaItems: allItems };
+      return updated;
+    });
     // Update displayed items if both items are currently displayed
     const displayedIndex = displayedMediaItems.findIndex((item) => item.id === id)
     if (displayedIndex !== -1) {
       const newDisplayedIndex = direction === "up" ? displayedIndex - 1 : displayedIndex + 1
-
       if (newDisplayedIndex >= 0 && newDisplayedIndex < displayedMediaItems.length) {
         const newDisplayedItems = [...displayedMediaItems]
         const [removedDisplayed] = newDisplayedItems.splice(displayedIndex, 1)
         newDisplayedItems.splice(newDisplayedIndex, 0, removedDisplayed)
-        setDisplayedMediaItems(newDisplayedItems)
+        setDisplayedMediaItems((prev: any) => {
+          return newDisplayedItems;
+        });
       }
+    }
+    // Persist order to backend
+    if (!token) return
+    setIsSavingOrder(true)
+    try {
+      await persistMediaOrder(lightbox.id, allItems, token)
+      toast({ title: "Order saved", description: "Media order updated" })
+    } catch {
+      toast({ title: "Error", description: "Failed to save order", variant: "destructive" })
+    } finally {
+      setIsSavingOrder(false)
     }
   }
 
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination || !lightbox) return
-
-    const allItems = Array.from(lightbox.mediaItems)
+    const allItems: MediaItem[] = Array.from(lightbox.mediaItems)
     const displayedItems = Array.from(displayedMediaItems)
-
     // Find the actual indices in the full array
     const sourceItem = displayedItems[result.source.index]
     const destItem = displayedItems[result.destination.index]
-
     const sourceIndex = allItems.findIndex((item: any) => item.id === sourceItem.id)
     const destIndex = allItems.findIndex((item: any) => item.id === destItem.id)
-
     // Reorder the full array
     const [reorderedItem] = allItems.splice(sourceIndex, 1)
     allItems.splice(destIndex, 0, reorderedItem)
-
     // Reorder the displayed items
     const [reorderedDisplayedItem] = displayedItems.splice(result.source.index, 1)
     displayedItems.splice(result.destination.index, 0, reorderedDisplayedItem)
-
     setLightbox({
       ...lightbox,
       mediaItems: allItems,
     })
-
     setDisplayedMediaItems(displayedItems)
+    // Persist order to backend
+    const token = localStorage.getItem("token")
+    if (!token) return
+    setIsSavingOrder(true)
+    try {
+      await persistMediaOrder(lightbox.id, allItems, token)
+      toast({ title: "Order saved", description: "Media order updated" })
+    } catch {
+      toast({ title: "Error", description: "Failed to save order", variant: "destructive" })
+    } finally {
+      setIsSavingOrder(false)
+    }
   }
 
   const handleCreateShareLink = () => {
@@ -705,7 +737,7 @@ export default function LightboxEditPage() {
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => handleMoveMedia(item.id, "up")}
-                                            disabled={index === 0}
+                                            disabled={index === 0 || isSavingOrder}
                                             className="text-gray-400 hover:text-white hover:bg-white/10"
                                           >
                                             <MoveUp className="h-4 w-4" />
@@ -714,7 +746,7 @@ export default function LightboxEditPage() {
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => handleMoveMedia(item.id, "down")}
-                                            disabled={index === displayedMediaItems.length - 1 && !hasMore}
+                                            disabled={index === displayedMediaItems.length - 1 && !hasMore || isSavingOrder}
                                             className="text-gray-400 hover:text-white hover:bg-white/10"
                                           >
                                             <MoveDown className="h-4 w-4" />

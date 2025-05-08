@@ -16,10 +16,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
   const lightbox = await prisma.lightboxes.findUnique({
     where: { id: params.id },
+    include: {
+      media_items: { orderBy: { order: 'asc' } }
+    }
   });
   if (!lightbox) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
+  const mediaItems = (lightbox.media_items || []).map((item: any) => ({
+    id: item.id,
+    url: item.s3_uri,
+    type: item.media_type,
+    title: item.s3_uri, // Placeholder, update if you have a title field
+    description: '', // Placeholder, update if you have a description field
+    thumbnailUrl: '', // Placeholder, update if you have a thumbnail field
+    duration_seconds: item.duration_seconds,
+    dimensions: item.dimensions,
+    order: item.order,
+    createdAt: item.created_at,
+  }));
   return NextResponse.json({
     id: lightbox.id,
     name: lightbox.name,
@@ -27,6 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     types: lightbox.types,
     keywords: lightbox.keywords,
     createdAt: lightbox.created_at,
+    mediaItems,
   });
 }
 
