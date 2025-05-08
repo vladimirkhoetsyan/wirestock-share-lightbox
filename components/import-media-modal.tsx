@@ -103,17 +103,17 @@ export default function ImportMediaModal({ isOpen, onClose, onImport, lightboxId
       if (!res.ok) throw new Error("Failed to import media from CSV")
       const data = await res.json()
       onImport(data)
-      setFile(null)
-      setIsUploading(false)
-      setUploadProgress(0)
-      setPreview([])
+          setFile(null)
+          setIsUploading(false)
+          setUploadProgress(0)
+          setPreview([])
       setHeaders([])
       setColumnMapping({})
-      onClose()
+          onClose()
     } catch (err: any) {
       setError(err.message || "Failed to import media from CSV")
-      setIsUploading(false)
-    }
+          setIsUploading(false)
+        }
   }
 
   return (

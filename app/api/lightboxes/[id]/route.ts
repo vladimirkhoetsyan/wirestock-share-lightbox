@@ -88,6 +88,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!payload || !payload.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  await prisma.lightboxes.delete({ where: { id: params.id } });
+  await prisma.lightboxes.update({ where: { id: params.id }, data: { deleted: true } });
   return NextResponse.json({ success: true });
 } 

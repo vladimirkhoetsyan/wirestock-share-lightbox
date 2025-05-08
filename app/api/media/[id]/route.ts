@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest, context: { params: { id: string }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-    await prisma.media_items.delete({ where: { id } });
+    await prisma.media_items.update({ where: { id }, data: { deleted: true } });
     return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: 'Delete failed', debug: String(e) }, { status: 400 });

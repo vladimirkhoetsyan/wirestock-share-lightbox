@@ -35,7 +35,7 @@ export default function SharePage() {
         const linkRes = await fetch(`/api/share-links/by-token/${encodeURIComponent(token)}`)
         if (!linkRes.ok) throw new Error("Share link not found")
         const link = await linkRes.json()
-        setShareLink(link)
+          setShareLink(link)
         // Check for access token in localStorage
         let accessToken = null
         let isValidToken = false
@@ -47,8 +47,8 @@ export default function SharePage() {
               const payload = JSON.parse(atob(accessToken.split('.')[1]))
               if (payload.exp && Date.now() / 1000 < payload.exp) {
                 isValidToken = true
-                setIsAuthenticated(true)
-              }
+            setIsAuthenticated(true)
+          }
             } catch {}
           }
         } else {
@@ -69,7 +69,7 @@ export default function SharePage() {
         setShareLink(null)
         setLightbox(null)
       } finally {
-        setIsLoading(false)
+      setIsLoading(false)
       }
     }
     fetchShareData()
@@ -253,9 +253,9 @@ export default function SharePage() {
               <p className="text-gray-400">{lightbox.description}</p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-gray-400">
-                <Eye className="h-4 w-4" />
-                <span className="text-sm">{shareLink.analytics.totalViews} views</span>
+            <div className="flex items-center gap-2 text-gray-400">
+              <Eye className="h-4 w-4" />
+              <span className="text-sm">{shareLink.analytics.totalViews} views</span>
               </div>
               {/* Logout button for password-protected lightboxes */}
               {shareLink.isPasswordProtected && (
@@ -292,7 +292,9 @@ export default function SharePage() {
                 </div>
               )}
               <div className="media-item-overlay">
-                <h3 className="font-medium text-white">{item.title}</h3>
+                {item.title && !/^s3:\/\//.test(item.title) && !/^https?:\/\//.test(item.title) && (
+                  <h3 className="font-medium text-white">{item.title}</h3>
+                )}
                 {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
               </div>
             </motion.div>

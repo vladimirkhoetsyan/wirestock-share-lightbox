@@ -309,10 +309,10 @@ export default function LightboxEditPage() {
         keywords: keywords.split(",").map((k: string) => k.trim()).filter((k: string) => k.length > 0),
       }, token)
       setLightbox(updated)
-      toast({
-        title: "Lightbox saved",
-        description: "Your changes have been saved successfully",
-      })
+    toast({
+      title: "Lightbox saved",
+      description: "Your changes have been saved successfully",
+    })
     } catch {
       toast({ title: "Error", description: "Failed to update lightbox", variant: "destructive" })
     }
@@ -344,7 +344,7 @@ export default function LightboxEditPage() {
     const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
     if (!token || !id) return
     try {
-      const isVideo = newMediaUrl.toLowerCase().endsWith(".mp4")
+    const isVideo = newMediaUrl.toLowerCase().endsWith(".mp4")
       const newMedia = await uploadMediaItem(id, {
         s3_uri: newMediaUrl,
         media_type: isVideo ? "video" : "image",
@@ -356,11 +356,11 @@ export default function LightboxEditPage() {
         },
         ...prev
       ])
-      setNewMediaUrl("")
-      toast({
-        title: "Media added",
-        description: "New media item has been added to the lightbox",
-      })
+    setNewMediaUrl("")
+    toast({
+      title: "Media added",
+      description: "New media item has been added to the lightbox",
+    })
     } catch {
       toast({ title: "Error", description: "Failed to add media item", variant: "destructive" })
     }
@@ -396,10 +396,10 @@ export default function LightboxEditPage() {
     try {
       await deleteMediaItem(id, token)
       setDisplayedMediaItems((prev) => prev.filter((item: any) => item.id !== id))
-      toast({
-        title: "Media removed",
-        description: "Media item has been removed from the lightbox",
-      })
+    toast({
+      title: "Media removed",
+      description: "Media item has been removed from the lightbox",
+    })
     } catch {
       toast({ title: "Error", description: "Failed to delete media item", variant: "destructive" })
     }
@@ -496,20 +496,20 @@ export default function LightboxEditPage() {
     if (!token || !id) return
     try {
       await createShareLink(id, {
-        name: newShareName,
-        isPasswordProtected,
-        password: isPasswordProtected ? newSharePassword : undefined,
+      name: newShareName,
+      isPasswordProtected,
+      password: isPasswordProtected ? newSharePassword : undefined,
       }, token)
       // Refresh share links
       const links = await fetchShareLinks(id, token)
       setLightbox((prev: any) => ({ ...prev, shareLinks: links }))
-      setNewShareName("")
-      setNewSharePassword("")
-      setIsPasswordProtected(false)
-      toast({
-        title: "Share link created",
-        description: "New share link has been created successfully",
-      })
+    setNewShareName("")
+    setNewSharePassword("")
+    setIsPasswordProtected(false)
+    toast({
+      title: "Share link created",
+      description: "New share link has been created successfully",
+    })
     } catch {
       toast({ title: "Error", description: "Failed to create share link", variant: "destructive" })
     }
@@ -523,10 +523,10 @@ export default function LightboxEditPage() {
       // Refresh share links
       const links = await fetchShareLinks(lightbox.id, token)
       setLightbox((prev: any) => ({ ...prev, shareLinks: links }))
-      toast({
-        title: "Share link revoked",
-        description: "Share link has been revoked successfully",
-      })
+    toast({
+      title: "Share link revoked",
+      description: "Share link has been revoked successfully",
+    })
     } catch {
       toast({ title: "Error", description: "Failed to revoke share link", variant: "destructive" })
     }
@@ -755,69 +755,69 @@ export default function LightboxEditPage() {
                                           }}
                                         />
                                         <div className="p-4 flex items-center gap-4 w-full relative z-10">
-                                          <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0">
-                                            <img
+                                        <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0">
+                                          <img
                                               src={item.signedUrl || item.thumbnailUrl || "/placeholder.svg"}
-                                              alt={item.title}
-                                              className="w-full h-full object-cover"
-                                            />
-                                            {item.type === "video" && (
-                                              <div className="relative w-8 h-8 bg-black/50 rounded-full flex items-center justify-center -mt-12 mx-auto">
-                                                <div className="w-0 h-0 border-t-4 border-t-transparent border-l-8 border-l-white border-b-4 border-b-transparent ml-1"></div>
-                                              </div>
+                                            alt={item.title}
+                                            className="w-full h-full object-cover"
+                                          />
+                                          {item.type === "video" && (
+                                            <div className="relative w-8 h-8 bg-black/50 rounded-full flex items-center justify-center -mt-12 mx-auto">
+                                              <div className="w-0 h-0 border-t-4 border-t-transparent border-l-8 border-l-white border-b-4 border-b-transparent ml-1"></div>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex-grow min-w-0">
+                                          <p className="font-medium truncate text-white">{item.title}</p>
+                                          <p className="text-sm text-gray-400 truncate">{item.url}</p>
+                                          <Badge
+                                            variant="outline"
+                                            className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
+                                          >
+                                            {item.type === "image" ? (
+                                              <ImageIcon className="h-3 w-3" />
+                                            ) : (
+                                              <Video className="h-3 w-3" />
                                             )}
-                                          </div>
-                                          <div className="flex-grow min-w-0">
-                                            <p className="font-medium truncate text-white">{item.title}</p>
-                                            <p className="text-sm text-gray-400 truncate">{item.url}</p>
-                                            <Badge
-                                              variant="outline"
-                                              className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
-                                            >
-                                              {item.type === "image" ? (
-                                                <ImageIcon className="h-3 w-3" />
-                                              ) : (
-                                                <Video className="h-3 w-3" />
-                                              )}
-                                              {item.type}
-                                            </Badge>
-                                          </div>
-                                          <div className="flex gap-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => handleOpenPreview(index)}
-                                              className="text-gray-400 hover:text-white hover:bg-white/10"
-                                              title="Preview"
-                                            >
-                                              <Maximize className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => handleMoveMedia(item.id, "up")}
+                                            {item.type}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleOpenPreview(index)}
+                                            className="text-gray-400 hover:text-white hover:bg-white/10"
+                                            title="Preview"
+                                          >
+                                            <Maximize className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleMoveMedia(item.id, "up")}
                                               disabled={index === 0 || isSavingOrder}
-                                              className="text-gray-400 hover:text-white hover:bg-white/10"
-                                            >
-                                              <MoveUp className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => handleMoveMedia(item.id, "down")}
+                                            className="text-gray-400 hover:text-white hover:bg-white/10"
+                                          >
+                                            <MoveUp className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleMoveMedia(item.id, "down")}
                                               disabled={index === displayedMediaItems.length - 1 && !hasMore || isSavingOrder}
-                                              className="text-gray-400 hover:text-white hover:bg-white/10"
-                                            >
-                                              <MoveDown className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => handleDeleteMedia(item.id)}
-                                              className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            className="text-gray-400 hover:text-white hover:bg-white/10"
+                                          >
+                                            <MoveDown className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDeleteMedia(item.id)}
+                                            className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
                                           </div>
                                         </div>
                                       </div>

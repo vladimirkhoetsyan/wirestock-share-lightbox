@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Optionally auto-login after registration
       return true
     } catch (e) {
-      return false
+    return false
     }
   }
 
