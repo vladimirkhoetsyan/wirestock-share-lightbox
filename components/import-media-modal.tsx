@@ -23,14 +23,24 @@ interface ImportMediaModalProps {
   isOpen: boolean
   onClose: () => void
   onImport: (mediaItems: MediaItem[]) => void
+  lightboxId: string
 }
 
-export default function ImportMediaModal({ isOpen, onClose, onImport }: ImportMediaModalProps) {
+const EXPECTED_FIELDS = [
+  { key: "url", label: "URL", aliases: ["url", "s3_url", "link", "media_url"] },
+  { key: "title", label: "Title", aliases: ["title", "name", "caption"] },
+  { key: "description", label: "Description", aliases: ["description", "desc", "details"] },
+  { key: "type", label: "Type", aliases: ["type", "media_type", "format"] },
+]
+
+export default function ImportMediaModal({ isOpen, onClose, onImport, lightboxId }: ImportMediaModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string[][]>([])
+  const [headers, setHeaders] = useState<string[]>([])
+  const [columnMapping, setColumnMapping] = useState<{ [key: string]: string }>({})
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -44,9 +54,22 @@ export default function ImportMediaModal({ isOpen, onClose, onImport }: ImportMe
         try {
           const text = event.target?.result as string
           const rows = text.split("\n").map((row) => row.split(",").map((cell) => cell.trim()))
-
-          // Show preview (first 5 rows)
-          setPreview(rows.slice(0, 5))
+          // Detect headers
+          let detectedHeaders: string[] = []
+          let dataRows = rows
+          if (rows.length > 0 && rows[0].some(cell => cell && isNaN(Number(cell)))) {
+            detectedHeaders = rows[0] as string[]
+            dataRows = rows.slice(1)
+          }
+          setHeaders(detectedHeaders)
+          setPreview(dataRows.slice(0, 5))
+          // Auto-map columns
+          const mapping: { [key: string]: string } = {}
+          EXPECTED_FIELDS.forEach(field => {
+            const match = detectedHeaders.find(h => field.aliases.includes(h.toLowerCase()))
+            if (match) mapping[field.key] = match
+          })
+          setColumnMapping(mapping)
         } catch (err) {
           setError("Failed to parse CSV file")
         }
@@ -55,69 +78,42 @@ export default function ImportMediaModal({ isOpen, onClose, onImport }: ImportMe
     }
   }
 
-  const handleImport = () => {
+  const handleMappingChange = (field: string, value: string) => {
+    setColumnMapping(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleImport = async () => {
     if (!file) {
       setError("Please select a CSV file")
       return
     }
-
     setIsUploading(true)
     setUploadProgress(0)
-
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 10
+    setError(null)
+    try {
+      const token = localStorage.getItem("token")
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("mapping", JSON.stringify(columnMapping))
+      const res = await fetch(`/api/lightboxes/${lightboxId}/import-csv`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
       })
-    }, 200)
-
-    // Simulate processing
-    setTimeout(() => {
-      clearInterval(interval)
-      setUploadProgress(100)
-
-      // Read the CSV file
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        try {
-          const text = event.target?.result as string
-          const rows = text.split("\n").filter((row) => row.trim() !== "")
-
-          // Process the CSV data
-          const mediaItems: MediaItem[] = rows.map((row, index) => {
-            const [url, title, description, type = "image"] = row.split(",").map((cell) => cell.trim())
-            const isVideo = type.toLowerCase() === "video" || url.toLowerCase().endsWith(".mp4")
-
-            return {
-              id: `imported-${Date.now()}-${index}`,
-              url,
-              type: isVideo ? "video" : "image",
-              title: title || `New ${isVideo ? "Video" : "Image"}`,
-              description: description || "",
-              thumbnailUrl: `/placeholder.svg?height=200&width=300&query=${isVideo ? "video thumbnail" : "image thumbnail"}`,
-            }
-          })
-
-          // Call the onImport callback with the processed data
-          onImport(mediaItems)
-
-          // Reset state
-          setFile(null)
-          setIsUploading(false)
-          setUploadProgress(0)
-          setPreview([])
-          onClose()
-        } catch (err) {
-          setError("Failed to process CSV file")
-          setIsUploading(false)
-        }
-      }
-      reader.readAsText(file)
-    }, 2000)
+      if (!res.ok) throw new Error("Failed to import media from CSV")
+      const data = await res.json()
+      onImport(data)
+      setFile(null)
+      setIsUploading(false)
+      setUploadProgress(0)
+      setPreview([])
+      setHeaders([])
+      setColumnMapping({})
+      onClose()
+    } catch (err: any) {
+      setError(err.message || "Failed to import media from CSV")
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -156,6 +152,27 @@ export default function ImportMediaModal({ isOpen, onClose, onImport }: ImportMe
             </p>
           </div>
 
+          {headers.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-white">Map CSV Columns</Label>
+              {EXPECTED_FIELDS.map(field => (
+                <div key={field.key} className="flex items-center gap-2">
+                  <span className="w-24 text-gray-300">{field.label}</span>
+                  <select
+                    className="bg-[#1a1a1c] border border-white/10 rounded px-2 py-1 text-white max-w-xs"
+                    value={columnMapping[field.key] || ""}
+                    onChange={e => handleMappingChange(field.key, e.target.value)}
+                  >
+                    <option value="">-- Not Mapped --</option>
+                    {headers.map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+
           {preview.length > 0 && (
             <div className="space-y-2">
               <Label className="text-white">Preview</Label>
@@ -163,19 +180,18 @@ export default function ImportMediaModal({ isOpen, onClose, onImport }: ImportMe
                 <table className="w-full text-sm text-white">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="text-left py-2 px-3">URL</th>
-                      <th className="text-left py-2 px-3">Title</th>
-                      <th className="text-left py-2 px-3">Description</th>
-                      <th className="text-left py-2 px-3">Type</th>
+                      {EXPECTED_FIELDS.map(field => (
+                        <th key={field.key} className="text-left py-2 px-3">{field.label}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {preview.map((row, index) => (
                       <tr key={index} className="border-b border-white/5">
-                        <td className="py-2 px-3 text-gray-300 truncate max-w-[200px]">{row[0] || "-"}</td>
-                        <td className="py-2 px-3 text-gray-300">{row[1] || "-"}</td>
-                        <td className="py-2 px-3 text-gray-300">{row[2] || "-"}</td>
-                        <td className="py-2 px-3 text-gray-300">{row[3] || "image"}</td>
+                        {EXPECTED_FIELDS.map(field => {
+                          const colIdx = headers.indexOf(columnMapping[field.key])
+                          return <td key={field.key} className="py-2 px-3 text-gray-300 truncate max-w-[200px]">{colIdx >= 0 ? row[colIdx] : "-"}</td>
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -186,12 +202,12 @@ export default function ImportMediaModal({ isOpen, onClose, onImport }: ImportMe
           )}
 
           {isUploading && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-400">
-                <span>Uploading...</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <Progress value={uploadProgress} className="h-2" />
+            <div className="flex items-center gap-2 text-blue-400 py-2">
+              <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Uploading and processing CSV...
             </div>
           )}
         </div>

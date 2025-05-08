@@ -1,15 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parse } from 'csv-parse/sync';
+import { getSignedS3Url } from '@/lib/s3';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 // POST /api/lightboxes/[id]/import-csv
 export async function POST(req: NextRequest, contextPromise: Promise<{ params: { id: string } }>) {
   const { params } = await contextPromise;
   const lightboxId = params.id;
-  const csvText = await req.text();
+
+  // Parse multipart form
+  let fileBuffer: Buffer, mapping: any;
+  try {
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+    mapping = formData.get('mapping') ? JSON.parse(formData.get('mapping') as string) : {};
+    if (!file) return NextResponse.json({ imported: 0, errors: ['No file uploaded'] }, { status: 400 });
+    fileBuffer = Buffer.from(await file.arrayBuffer());
+  } catch (err) {
+    return NextResponse.json({ imported: 0, errors: ['Failed to parse form data'] }, { status: 400 });
+  }
 
   let records;
   try {
+    const csvText = fileBuffer.toString('utf-8');
     records = parse(csvText, {
       columns: true,
       skip_empty_lines: true,
@@ -19,30 +38,35 @@ export async function POST(req: NextRequest, contextPromise: Promise<{ params: {
   }
 
   const errors: string[] = [];
-  let imported = 0;
+  const importedItems = [];
 
   for (const record of records) {
-    // Validate required fields
-    if (!record.s3_uri) {
+    // Use mapping to get correct fields
+    const s3_uri = mapping.url ? record[mapping.url] : record.s3_uri;
+    const media_type = mapping.type ? record[mapping.type] : record.media_type;
+    // Add more fields as needed
+    if (!s3_uri) {
       errors.push(`Missing s3_uri in record: ${JSON.stringify(record)}`);
       continue;
     }
     try {
-      await prisma.media_items.create({
+      const created = await prisma.media_items.create({
         data: {
           lightbox_id: lightboxId,
-          s3_uri: record.s3_uri,
-          media_type: record.media_type || null,
-          duration_seconds: record.duration_seconds ? Number(record.duration_seconds) : null,
-          dimensions: record.dimensions || null,
-          order: record.order ? Number(record.order) : 0,
+          s3_uri,
+          media_type: media_type || null,
+          // Add more fields as needed
         },
       });
-      imported++;
+      let signedUrl = null;
+      try {
+        signedUrl = await getSignedS3Url(s3_uri);
+      } catch {}
+      importedItems.push({ ...created, signedUrl });
     } catch (e) {
       errors.push(`Failed to import record: ${JSON.stringify(record)}`);
     }
   }
 
-  return NextResponse.json({ imported, errors });
+  return NextResponse.json(importedItems);
 } 

@@ -998,6 +998,7 @@ export default function LightboxEditPage() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImport={handleImportMedia}
+        lightboxId={typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : ""}
       />
 
       {/* Media Preview Modal */}
