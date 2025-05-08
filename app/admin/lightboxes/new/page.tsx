@@ -17,6 +17,19 @@ import { Save, ArrowLeft, ImageIcon, Video } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 
+async function createLightbox(data: any, token: string) {
+  const res = await fetch("/api/lightboxes", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("Failed to create lightbox")
+  return res.json()
+}
+
 export default function CreateLightboxPage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -36,7 +49,7 @@ export default function CreateLightboxPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!name.trim()) {
@@ -50,34 +63,29 @@ export default function CreateLightboxPage() {
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      // Create a new lightbox
-      const newId = String(Math.max(...mockLightboxes.map((l) => Number(l.id))) + 1)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) throw new Error("Not authenticated")
       const keywordArray = keywords
         .split(",")
         .map((k) => k.trim())
         .filter((k) => k.length > 0)
-
-      // In a real app, this would be an API call to create the lightbox
-      mockLightboxes.push({
-        id: newId,
+      const newLightbox = await createLightbox({
         name,
         description,
         types: selectedTypes,
         keywords: keywordArray,
-        mediaItems: [],
-        shareLinks: [],
-      })
-
+      }, token)
       toast({
         title: "Lightbox created",
         description: "Your new lightbox has been created successfully",
       })
-
-      // Redirect to the edit page
-      router.push(`/admin/lightboxes/${newId}`)
-    }, 1000)
+      router.push(`/admin/lightboxes/${newLightbox.id}`)
+    } catch {
+      toast({ title: "Error", description: "Failed to create lightbox", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

@@ -10,6 +10,7 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<boolean>
   fetchCurrentUser: () => Promise<any | null>
   logout: () => void
+  loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -18,13 +19,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<any | null>(null)
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
 
   // Check if user is already logged in on mount
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (token) {
       setIsAuthenticated(true)
-      fetchCurrentUser()
+      fetchCurrentUser().finally(() => setLoading(false))
+    } else {
+      setIsAuthenticated(false)
+      setUser(null)
+      setLoading(false)
     }
   }, [])
 
@@ -98,7 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/admin/login")
   }
 
-  return <AuthContext.Provider value={{ isAuthenticated, user, login, register, fetchCurrentUser, logout }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, user, login, register, fetchCurrentUser, logout, loading }}>
+      {loading ? <div>Loading...</div> : children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

@@ -13,35 +13,61 @@ import { Edit, Trash2, Plus, ImageIcon, Video, Share2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 
+async function fetchLightboxes(token: string) {
+  const res = await fetch("/api/lightboxes", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to fetch lightboxes")
+  return res.json()
+}
+
+async function deleteLightbox(id: string, token: string) {
+  const res = await fetch(`/api/lightboxes/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to delete lightbox")
+  return res.json()
+}
+
 export default function DashboardPage() {
-  const [lightboxes, setLightboxes] = useState<Lightbox[]>([])
+  const [lightboxes, setLightboxes] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setLightboxes(mockLightboxes)
-      setIsLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
+    const token = localStorage.getItem("token")
+    if (!token) return
+    fetchLightboxes(token)
+      .then(setLightboxes)
+      .catch(() => toast({ title: "Error", description: "Failed to load lightboxes", variant: "destructive" }))
+      .finally(() => setIsLoading(false))
   }, [])
 
-  const handleDelete = (id: string) => {
-    setLightboxes(lightboxes.filter((lightbox) => lightbox.id !== id))
-    toast({
-      title: "Lightbox deleted",
-      description: "The lightbox has been successfully deleted",
-    })
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this lightbox? This action cannot be undone.")) {
+      return
+    }
+    const token = localStorage.getItem("token")
+    if (!token) return
+    try {
+      await deleteLightbox(id, token)
+      setLightboxes(lightboxes.filter((lightbox) => lightbox.id !== id))
+      toast({
+        title: "Lightbox deleted",
+        description: "The lightbox has been successfully deleted",
+      })
+    } catch {
+      toast({ title: "Error", description: "Failed to delete lightbox", variant: "destructive" })
+    }
   }
 
   // Calculate total stats
-  const totalMediaItems = lightboxes.reduce((acc, lb) => acc + lb.mediaItems.length, 0)
-  const totalShareLinks = lightboxes.reduce((acc, lb) => acc + lb.shareLinks.length, 0)
+  const totalMediaItems = lightboxes.reduce((acc: number, lb: any) => acc + (lb.mediaItems?.length || 0), 0)
+  const totalShareLinks = lightboxes.reduce((acc: number, lb: any) => acc + (lb.shareLinks?.length || 0), 0)
   const totalViews = lightboxes.reduce(
-    (acc, lb) => acc + lb.shareLinks.reduce((a, link) => a + link.analytics.totalViews, 0),
+    (acc: number, lb: any) => acc + (lb.shareLinks?.reduce((a: number, link: any) => a + (link.analytics?.totalViews || 0), 0) || 0),
     0,
   )
 
@@ -141,7 +167,7 @@ export default function DashboardPage() {
                         <p className="text-gray-300 text-sm mb-4 line-clamp-2">{lightbox.description}</p>
 
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {lightbox.types.map((type) => (
+                          {lightbox.types?.map((type: any) => (
                             <Badge
                               key={type}
                               variant="outline"
@@ -154,14 +180,14 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {lightbox.keywords.slice(0, 3).map((keyword) => (
+                          {lightbox.keywords?.slice(0, 3).map((keyword: any) => (
                             <Badge key={keyword} variant="secondary" className="bg-white/10 text-xs text-white">
                               {keyword}
                             </Badge>
                           ))}
-                          {lightbox.keywords.length > 3 && (
+                          {lightbox.keywords?.length > 3 && (
                             <Badge variant="secondary" className="bg-white/10 text-xs text-white">
-                              +{lightbox.keywords.length - 3} more
+                              +{lightbox.keywords?.length - 3} more
                             </Badge>
                           )}
                         </div>
@@ -169,11 +195,11 @@ export default function DashboardPage() {
                         <div className="flex gap-6 text-sm text-gray-300">
                           <div className="flex items-center gap-1">
                             <ImageIcon className="h-4 w-4" />
-                            <span>{lightbox.mediaItems.length} items</span>
+                            <span>{lightbox.mediaItems?.length} items</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Share2 className="h-4 w-4" />
-                            <span>{lightbox.shareLinks.length} shares</span>
+                            <span>{lightbox.shareLinks?.length} shares</span>
                           </div>
                         </div>
                       </div>

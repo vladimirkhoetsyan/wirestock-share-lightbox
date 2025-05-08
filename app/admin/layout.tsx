@@ -1,7 +1,6 @@
 import type React from "react"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
-import { TestToastButton } from "@/components/TestToastButton"
 
 export default function AdminLayout({
   children,
@@ -11,7 +10,7 @@ export default function AdminLayout({
   return (
     <AuthProvider>
       <div className="min-h-screen bg-[#0a0a0c]">
-        <TestToastButton />
+        {/* <TestToastButton /> */}
         {children}
       </div>
       <Toaster />

@@ -22,7 +22,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
   const [duration, setDuration] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
-  const currentItem = mediaItems[currentIndex]
+  const currentItem = Array.isArray(mediaItems) && mediaItems.length > 0 && currentIndex >= 0 && currentIndex < mediaItems.length ? mediaItems[currentIndex] : undefined
 
   useEffect(() => {
     setCurrentIndex(initialIndex)

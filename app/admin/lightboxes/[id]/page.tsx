@@ -52,9 +52,39 @@ import MediaPreviewModal from "@/components/media-preview-modal"
 // Number of items to load per page
 const ITEMS_PER_PAGE = 10
 
+async function fetchLightbox(id: string, token: string) {
+  const res = await fetch(`/api/lightboxes/${id}` , {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to fetch lightbox")
+  return res.json()
+}
+
+async function updateLightbox(id: string, data: any, token: string) {
+  const res = await fetch(`/api/lightboxes/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("Failed to update lightbox")
+  return res.json()
+}
+
+async function deleteLightbox(id: string, token: string) {
+  const res = await fetch(`/api/lightboxes/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to delete lightbox")
+  return res.json()
+}
+
 export default function LightboxEditPage() {
   const params = useParams();
-  const [lightbox, setLightbox] = useState<Lightbox | null>(null)
+  const [lightbox, setLightbox] = useState<any>(null)
   const [newMediaUrl, setNewMediaUrl] = useState("")
   const [newShareName, setNewShareName] = useState("")
   const [newSharePassword, setNewSharePassword] = useState("")
@@ -75,22 +105,19 @@ export default function LightboxEditPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      const foundLightbox = mockLightboxes.find((lb) => lb.id === params.id)
-      if (foundLightbox) {
-        setLightbox({ ...foundLightbox })
-        setSelectedTypes(foundLightbox.types)
-        setKeywords(foundLightbox.keywords.join(", "))
-
-        // Initialize displayed media items with first page
-        setDisplayedMediaItems(foundLightbox.mediaItems.slice(0, ITEMS_PER_PAGE))
-        setHasMore(foundLightbox.mediaItems.length > ITEMS_PER_PAGE)
-      }
-      setIsLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
+    const token = localStorage.getItem("token")
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
+    if (!token || !id) return
+    fetchLightbox(id, token)
+      .then((data) => {
+        setLightbox(data)
+        setSelectedTypes(data.types)
+        setKeywords(data.keywords.join(", "))
+        setDisplayedMediaItems(data.mediaItems || [])
+        setHasMore((data.mediaItems?.length || 0) > ITEMS_PER_PAGE)
+      })
+      .catch(() => toast({ title: "Error", description: "Failed to load lightbox", variant: "destructive" }))
+      .finally(() => setIsLoading(false))
   }, [params.id])
 
   // Infinite scroll implementation
@@ -153,12 +180,38 @@ export default function LightboxEditPage() {
     )
   }
 
-  const handleSave = () => {
-    // In a real app, this would save to a database
-    toast({
-      title: "Lightbox saved",
-      description: "Your changes have been saved successfully",
-    })
+  const handleSave = async () => {
+    const token = localStorage.getItem("token")
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
+    if (!token || !lightbox || !id) return
+    try {
+      const updated = await updateLightbox(id, {
+        name: lightbox.name,
+        description: lightbox.description,
+        types: selectedTypes,
+        keywords: keywords.split(",").map((k: string) => k.trim()).filter((k: string) => k.length > 0),
+      }, token)
+      setLightbox(updated)
+      toast({
+        title: "Lightbox saved",
+        description: "Your changes have been saved successfully",
+      })
+    } catch {
+      toast({ title: "Error", description: "Failed to update lightbox", variant: "destructive" })
+    }
+  }
+
+  const handleDelete = async () => {
+    const token = localStorage.getItem("token")
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
+    if (!token || !lightbox || !id) return
+    try {
+      await deleteLightbox(id, token)
+      toast({ title: "Lightbox deleted", description: "The lightbox has been deleted" })
+      router.push("/admin/dashboard")
+    } catch {
+      toast({ title: "Error", description: "Failed to delete lightbox", variant: "destructive" })
+    }
   }
 
   const handleAddMedia = () => {
@@ -221,7 +274,7 @@ export default function LightboxEditPage() {
   const handleDeleteMedia = (id: string) => {
     if (!lightbox) return
 
-    const updatedMediaItems = lightbox.mediaItems.filter((item) => item.id !== id)
+    const updatedMediaItems = lightbox.mediaItems.filter((item: any) => item.id !== id)
 
     setLightbox({
       ...lightbox,
@@ -290,8 +343,8 @@ export default function LightboxEditPage() {
     const sourceItem = displayedItems[result.source.index]
     const destItem = displayedItems[result.destination.index]
 
-    const sourceIndex = allItems.findIndex((item) => item.id === sourceItem.id)
-    const destIndex = allItems.findIndex((item) => item.id === destItem.id)
+    const sourceIndex = allItems.findIndex((item: any) => item.id === sourceItem.id)
+    const destIndex = allItems.findIndex((item: any) => item.id === destItem.id)
 
     // Reorder the full array
     const [reorderedItem] = allItems.splice(sourceIndex, 1)
@@ -354,7 +407,7 @@ export default function LightboxEditPage() {
 
     setLightbox({
       ...lightbox,
-      shareLinks: lightbox.shareLinks.filter((link) => link.id !== id),
+      shareLinks: lightbox.shareLinks.filter((link: any) => link.id !== id),
     })
 
     toast({
@@ -402,7 +455,7 @@ export default function LightboxEditPage() {
   const handleOpenPreview = (index: number) => {
     // Find the actual index in the full media items array
     const mediaItem = displayedMediaItems[index]
-    const fullIndex = lightbox?.mediaItems.findIndex((item) => item.id === mediaItem.id) || 0
+    const fullIndex = lightbox?.mediaItems.findIndex((item: any) => item.id === mediaItem.id) || 0
 
     setSelectedMediaIndex(fullIndex)
     setIsPreviewOpen(true)
@@ -528,7 +581,7 @@ export default function LightboxEditPage() {
                     <div className="glass-card rounded-xl p-6">
                       <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold text-white">Media Items</h2>
-                        <div className="text-sm text-gray-400">{lightbox.mediaItems.length} total items</div>
+                        <div className="text-sm text-gray-400">{lightbox.mediaItems?.length ?? 0} total items</div>
                       </div>
 
                       <div className="flex flex-col md:flex-row gap-2 mb-6">
@@ -569,7 +622,7 @@ export default function LightboxEditPage() {
                                   <p className="text-sm text-gray-400">Add your first item using the form above</p>
                                 </div>
                               ) : (
-                                displayedMediaItems.map((item, index) => (
+                                displayedMediaItems.map((item: any, index: number) => (
                                   <Draggable key={item.id} draggableId={item.id} index={index}>
                                     {(provided) => (
                                       <div
@@ -740,7 +793,7 @@ export default function LightboxEditPage() {
                         </DialogContent>
                       </Dialog>
 
-                      {lightbox.shareLinks.length === 0 ? (
+                      {lightbox.shareLinks?.length === 0 ? (
                         <div className="text-center py-12 border border-dashed border-white/20 rounded-xl">
                           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
                             <Share2 className="h-8 w-8 text-gray-400" />
@@ -751,7 +804,7 @@ export default function LightboxEditPage() {
                       ) : (
                         <ScrollArea className="h-[400px] pr-4">
                           <div className="space-y-4">
-                            {lightbox.shareLinks.map((link) => (
+                            {lightbox.shareLinks?.map((link: any, idx: number) => (
                               <div key={link.id} className="glass-card rounded-xl p-4">
                                 <div className="flex justify-between items-start mb-3">
                                   <div>

@@ -7,18 +7,17 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       router.push("/admin/login")
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, loading, router])
 
-  if (!isAuthenticated) {
-    return null
-  }
+  if (loading) return <div>Loading...</div>
+  if (!isAuthenticated) return null
 
   return <>{children}</>
 }
