@@ -12,9 +12,10 @@ interface MediaPreviewModalProps {
   onClose: () => void
   mediaItems: MediaItem[]
   initialIndex: number
+  onRequestMore?: () => Promise<void>
 }
 
-export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initialIndex }: MediaPreviewModalProps) {
+export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initialIndex, onRequestMore }: MediaPreviewModalProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -43,9 +44,21 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : mediaItems.length - 1))
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setIsLoading(true)
-    setCurrentIndex((prev) => (prev < mediaItems.length - 1 ? prev + 1 : 0))
+    if (currentIndex < mediaItems.length - 1) {
+      setCurrentIndex((prev) => prev + 1)
+    } else if (onRequestMore) {
+      await onRequestMore()
+      // If new items were loaded, move to the next one
+      if (mediaItems.length > currentIndex + 1) {
+        setCurrentIndex((prev) => prev + 1)
+      } else {
+        setIsLoading(false)
+      }
+    } else {
+      setCurrentIndex(0)
+    }
   }
 
   const togglePlay = () => {
@@ -124,7 +137,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  src={currentItem.thumbnailUrl || "/placeholder.svg"}
+                  src={currentItem.signedUrl || currentItem.thumbnailUrl || "/placeholder.svg"}
                   alt={currentItem.title}
                   className="max-h-full max-w-full object-contain"
                 />
@@ -138,7 +151,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   className="relative w-full h-full flex items-center justify-center"
                 >
                   <img
-                    src={currentItem.thumbnailUrl || "/placeholder.svg"}
+                    src={currentItem.signedUrl || currentItem.thumbnailUrl || "/placeholder.svg"}
                     alt={currentItem.title}
                     className="max-h-full max-w-full object-contain"
                   />

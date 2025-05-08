@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { verifyJwt } from 'lib/auth-server';
+import { getSignedS3Url } from 'lib/s3';
 
 // POST /api/media/upload
 export async function POST(req: NextRequest) {
@@ -35,6 +36,10 @@ export async function POST(req: NextRequest) {
       order: newOrder,
     },
   });
+  let signedUrl = null;
+  try {
+    signedUrl = await getSignedS3Url(item.s3_uri);
+  } catch (e) {}
   return NextResponse.json({
     id: item.id,
     s3_uri: item.s3_uri,
@@ -44,5 +49,6 @@ export async function POST(req: NextRequest) {
     order: item.order,
     createdAt: item.created_at,
     lightbox_id: item.lightbox_id,
+    signedUrl,
   });
 } 

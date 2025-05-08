@@ -82,6 +82,49 @@ async function deleteLightbox(id: string, token: string) {
   return res.json()
 }
 
+// API helpers for media items
+async function fetchMediaItems(lightboxId: string, token: string) {
+  const res = await fetch(`/api/lightboxes/${lightboxId}/media`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to fetch media items")
+  return res.json()
+}
+
+async function uploadMediaItem(lightboxId: string, data: any, token: string) {
+  const res = await fetch(`/api/media/upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ...data, lightbox_id: lightboxId }),
+  })
+  if (!res.ok) throw new Error("Failed to upload media item")
+  return res.json()
+}
+
+async function deleteMediaItem(mediaId: string, token: string) {
+  const res = await fetch(`/api/media/${mediaId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error("Failed to delete media item")
+  return res.json()
+}
+
+function combineRefs(...refs: any[]) {
+  return (node: any) => {
+    refs.forEach(ref => {
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref && typeof ref === "object") {
+        ref.current = node;
+      }
+    });
+  };
+}
+
 export default function LightboxEditPage() {
   const params = useParams();
   const [lightbox, setLightbox] = useState<any>(null)
@@ -113,8 +156,13 @@ export default function LightboxEditPage() {
         setLightbox(data)
         setSelectedTypes(data.types)
         setKeywords(data.keywords.join(", "))
-        setDisplayedMediaItems(data.mediaItems || [])
-        setHasMore((data.mediaItems?.length || 0) > ITEMS_PER_PAGE)
+        // Fetch media items from backend
+        fetchMediaItems(id, token)
+          .then((media) => {
+            setDisplayedMediaItems(media)
+            setHasMore(media.length > ITEMS_PER_PAGE)
+          })
+          .catch(() => toast({ title: "Error", description: "Failed to load media items", variant: "destructive" }))
       })
       .catch(() => toast({ title: "Error", description: "Failed to load lightbox", variant: "destructive" }))
       .finally(() => setIsLoading(false))
@@ -214,7 +262,7 @@ export default function LightboxEditPage() {
     }
   }
 
-  const handleAddMedia = () => {
+  const handleAddMedia = async () => {
     if (!newMediaUrl.trim() || !lightbox) {
       toast({
         title: "Error",
@@ -223,31 +271,30 @@ export default function LightboxEditPage() {
       })
       return
     }
-
-    const isVideo = newMediaUrl.toLowerCase().endsWith(".mp4")
-    const newId = `media-${Date.now()}`
-    const newMedia: MediaItem = {
-      id: newId,
-      url: newMediaUrl,
-      type: isVideo ? "video" : "image",
-      title: `New ${isVideo ? "Video" : "Image"}`,
-      description: "",
-      thumbnailUrl: `/placeholder.svg?height=200&width=300&query=${isVideo ? "video" : "image"}`,
+    const token = localStorage.getItem("token")
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
+    if (!token || !id) return
+    try {
+      const isVideo = newMediaUrl.toLowerCase().endsWith(".mp4")
+      const newMedia = await uploadMediaItem(id, {
+        s3_uri: newMediaUrl,
+        media_type: isVideo ? "video" : "image",
+      }, token)
+      setDisplayedMediaItems((prev) => [
+        {
+          ...newMedia,
+          thumbnailUrl: newMedia.signedUrl || "/placeholder.svg"
+        },
+        ...prev
+      ])
+      setNewMediaUrl("")
+      toast({
+        title: "Media added",
+        description: "New media item has been added to the lightbox",
+      })
+    } catch {
+      toast({ title: "Error", description: "Failed to add media item", variant: "destructive" })
     }
-
-    const updatedLightbox = {
-      ...lightbox,
-      mediaItems: [newMedia, ...lightbox.mediaItems],
-    }
-
-    setLightbox(updatedLightbox)
-    setDisplayedMediaItems([newMedia, ...displayedMediaItems.slice(0, ITEMS_PER_PAGE - 1)])
-    setNewMediaUrl("")
-
-    toast({
-      title: "Media added",
-      description: "New media item has been added to the lightbox",
-    })
   }
 
   const handleImportMedia = (mediaItems: MediaItem[]) => {
@@ -271,34 +318,22 @@ export default function LightboxEditPage() {
     })
   }
 
-  const handleDeleteMedia = (id: string) => {
-    if (!lightbox) return
-
-    const updatedMediaItems = lightbox.mediaItems.filter((item: any) => item.id !== id)
-
-    setLightbox({
-      ...lightbox,
-      mediaItems: updatedMediaItems,
-    })
-
-    // Update displayed items
-    setDisplayedMediaItems((prev) => prev.filter((item) => item.id !== id))
-
-    // If we've removed an item, we might need to load one more
-    if (hasMore && displayedMediaItems.length < ITEMS_PER_PAGE) {
-      const nextItemIndex = currentPage * ITEMS_PER_PAGE
-      if (nextItemIndex < updatedMediaItems.length) {
-        setDisplayedMediaItems((prev) => [...prev, updatedMediaItems[nextItemIndex]])
-      }
+  const handleDeleteMedia = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this media item? This action cannot be undone.")) {
+      return
     }
-
-    // Update hasMore flag
-    setHasMore(currentPage * ITEMS_PER_PAGE < updatedMediaItems.length)
-
-    toast({
-      title: "Media removed",
-      description: "Media item has been removed from the lightbox",
-    })
+    const token = localStorage.getItem("token")
+    if (!token) return
+    try {
+      await deleteMediaItem(id, token)
+      setDisplayedMediaItems((prev) => prev.filter((item: any) => item.id !== id))
+      toast({
+        title: "Media removed",
+        description: "Media item has been removed from the lightbox",
+      })
+    } catch {
+      toast({ title: "Error", description: "Failed to delete media item", variant: "destructive" })
+    }
   }
 
   const handleMoveMedia = (id: string, direction: "up" | "down") => {
@@ -453,11 +488,7 @@ export default function LightboxEditPage() {
   }
 
   const handleOpenPreview = (index: number) => {
-    // Find the actual index in the full media items array
-    const mediaItem = displayedMediaItems[index]
-    const fullIndex = lightbox?.mediaItems.findIndex((item: any) => item.id === mediaItem.id) || 0
-
-    setSelectedMediaIndex(fullIndex)
+    setSelectedMediaIndex(index)
     setIsPreviewOpen(true)
   }
 
@@ -626,14 +657,16 @@ export default function LightboxEditPage() {
                                   <Draggable key={item.id} draggableId={item.id} index={index}>
                                     {(provided) => (
                                       <div
-                                        ref={index === displayedMediaItems.length - 1 ? lastItemRef : provided.innerRef}
+                                        ref={index === displayedMediaItems.length - 1
+                                          ? combineRefs(provided.innerRef, lastItemRef)
+                                          : provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
                                         className="flex items-center gap-4 p-4 glass-card rounded-xl"
                                       >
                                         <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0">
                                           <img
-                                            src={item.thumbnailUrl || "/placeholder.svg"}
+                                            src={item.signedUrl || item.thumbnailUrl || "/placeholder.svg"}
                                             alt={item.title}
                                             className="w-full h-full object-cover"
                                           />
@@ -925,8 +958,13 @@ export default function LightboxEditPage() {
         <MediaPreviewModal
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
-          mediaItems={lightbox.mediaItems}
+          mediaItems={displayedMediaItems}
           initialIndex={selectedMediaIndex}
+          onRequestMore={async () => {
+            if (hasMore && !isLoadingMore) {
+              await loadMoreItems()
+            }
+          }}
         />
       )}
     </ProtectedRoute>

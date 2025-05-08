@@ -7,6 +7,7 @@ export interface MediaItem {
   title: string
   description?: string
   thumbnailUrl: string
+  signedUrl?: string
 }
 
 export interface ShareLink {
