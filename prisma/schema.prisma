@@ -16,6 +16,11 @@ model analytics {
   duration_ms   Int?
   ip            String?
   user_agent    String?
+  session_id    String?      // uniquely identifies the viewer's session across multiple events
+  referrer      String?      // records the referring URL for understanding navigation context
+  screen_size   String?      // captures the viewport dimensions
+  geo_country   String?      // country code from IP geolocation
+  geo_region    String?      // region/state from IP geolocation
   created_at    DateTime?    @default(now()) @db.Timestamp(6)
   media_items   media_items? @relation(fields: [media_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   share_links   share_links? @relation(fields: [share_link_id], references: [id], onDelete: Cascade, onUpdate: NoAction)

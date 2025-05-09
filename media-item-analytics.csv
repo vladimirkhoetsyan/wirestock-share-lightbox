@@ -1,0 +1,4 @@
+event,session_id,user_agent,ip,geo_country,geo_region,media_item_id,duration_ms,created_at
+media_click,,,::1,,,82c410cd-724a-4a33-8442-9ac0cc7886cb,,2025-05-09T19:21:09.350Z
+media_click,,,::1,,,82c410cd-724a-4a33-8442-9ac0cc7886cb,,2025-05-09T19:28:47.661Z
+media_click,7c4d2286-9d49-4133-84a7-bde07977aa70,Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML  like Gecko) Chrome/136.0.0.0 Safari/537.36,2a02:2a57:522e:0:1979:9df0:9bcd:e4fc,AM,Yerevan,82c410cd-724a-4a33-8442-9ac0cc7886cb,,2025-05-09T19:32:36.733Z

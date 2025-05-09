@@ -37,6 +37,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Get IP address from request
+  let ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+
+  // Fetch geolocation info
+  let geo_country = null;
+  let geo_region = null;
+  if (ip && ip !== '::1' && ip !== '127.0.0.1') {
+    try {
+      const geoRes = await fetch(`http://ip-api.com/json/${ip}`);
+      if (geoRes.ok) {
+        const geo = await geoRes.json();
+        geo_country = geo.countryCode || null;
+        geo_region = geo.regionName || null;
+      }
+    } catch {}
+  }
+
   try {
     const analytics = await prisma.analytics.create({
       data: {
@@ -44,12 +61,19 @@ export async function POST(req: NextRequest) {
         media_item_id: data.media_item_id || null,
         event: data.event,
         duration_ms: data.duration_ms || null,
-        ip: data.ip || null,
+        ip: ip,
         user_agent: data.user_agent || null,
+        session_id: data.session_id || null,
+        referrer: data.referrer || null,
+        screen_size: data.screen_size || null,
+        geo_country,
+        geo_region,
+        // created_at is handled by Prisma default
       },
     });
     return NextResponse.json({ success: true, id: analytics.id });
   } catch (e) {
+    console.error('Analytics event error:', e);
     return NextResponse.json({ error: 'Failed to record event' }, { status: 500 });
   }
 } 

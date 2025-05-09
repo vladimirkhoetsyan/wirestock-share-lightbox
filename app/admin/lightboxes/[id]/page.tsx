@@ -30,6 +30,7 @@ import {
   Share2,
   Upload,
   Maximize,
+  BarChart2,
 } from "lucide-react"
 import {
   Dialog,
@@ -51,6 +52,20 @@ import MediaPreviewModal from "@/components/media-preview-modal"
 
 // Number of items to load per page
 const ITEMS_PER_PAGE = 10
+
+// Helper: file extension mapping for media type
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+const VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "m4v", "avi", "mkv", "ogv", "3gp", "3g2", "hls", "m3u8"];
+function getMediaTypeFromUrl(url?: string): "image" | "video" | undefined {
+  if (!url) return undefined;
+  const extMatch = url.split("?")[0].split(".").pop();
+  if (!extMatch) return undefined;
+  const ext = extMatch.toLowerCase();
+  if (IMAGE_EXTENSIONS.includes(ext)) return "image";
+  if (VIDEO_EXTENSIONS.includes(ext)) return "video";
+  if (url.toLowerCase().includes(".m3u8")) return "video";
+  return undefined;
+}
 
 async function fetchLightbox(id: string, token: string) {
   const res = await fetch(`/api/lightboxes/${id}` , {
@@ -590,6 +605,17 @@ export default function LightboxEditPage() {
                 {isLoading ? <div className="h-9 bg-white/10 rounded w-48 animate-pulse"></div> : lightbox?.name}
               </h1>
               <Button
+                asChild
+                size="sm"
+                className="bg-white/10 hover:bg-white/20 text-white mr-2"
+                title="View Analytics"
+              >
+                <Link href={`/admin/analytics/lightbox/${typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : ''}`}>
+                  <BarChart2 className="mr-2 h-4 w-4" />
+                  Analytics
+                </Link>
+              </Button>
+              <Button
                 onClick={handleSave}
                 className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
               >
@@ -628,7 +654,7 @@ export default function LightboxEditPage() {
                         </Label>
                         <Textarea
                           id="description"
-                          value={lightbox.description}
+                          value={lightbox.description ?? ""}
                           onChange={(e) => setLightbox({ ...lightbox, description: e.target.value })}
                           rows={3}
                           className="bg-[#1a1a1c] border-white/10 text-white"
@@ -668,7 +694,7 @@ export default function LightboxEditPage() {
                         </Label>
                         <Textarea
                           id="keywords"
-                          value={keywords}
+                          value={keywords ?? ""}
                           onChange={(e) => handleKeywordsChange(e.target.value)}
                           rows={2}
                           placeholder="nature, landscape, wildlife"
@@ -755,15 +781,17 @@ export default function LightboxEditPage() {
                                           }}
                                         />
                                         <div className="p-4 flex items-center gap-4 w-full relative z-10">
-                                        <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0">
+                                        <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0 relative">
                                           <img
-                                              src={item.signedUrl || item.thumbnailUrl || "/placeholder.svg"}
+                                              src={getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "video" ? (item.thumbnailUrl || "/video-placeholder.svg") : (item.signedUrl || item.thumbnailUrl || "/placeholder.svg")}
                                             alt={item.title}
                                             className="w-full h-full object-cover"
                                           />
-                                          {item.type === "video" && (
-                                            <div className="relative w-8 h-8 bg-black/50 rounded-full flex items-center justify-center -mt-12 mx-auto">
-                                              <div className="w-0 h-0 border-t-4 border-t-transparent border-l-8 border-l-white border-b-4 border-b-transparent ml-1"></div>
+                                          {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "video" && (
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                              <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+                                                <Video className="h-4 w-4 text-white" />
+                                              </div>
                                             </div>
                                           )}
                                         </div>
@@ -774,12 +802,12 @@ export default function LightboxEditPage() {
                                             variant="outline"
                                             className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
                                           >
-                                            {item.type === "image" ? (
+                                            {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "image" ? (
                                               <ImageIcon className="h-3 w-3" />
                                             ) : (
                                               <Video className="h-3 w-3" />
                                             )}
-                                            {item.type}
+                                            {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl)}
                                           </Badge>
                                         </div>
                                         <div className="flex gap-1">
@@ -1015,10 +1043,22 @@ export default function LightboxEditPage() {
                                     className="bg-white/5 hover:bg-white/10 text-white"
                                     asChild
                                   >
-                                    <a href={`/share/${link.token}`} target="_blank" rel="noreferrer">
+                                    <Link href={`/share/${link.token}`} target="_blank" rel="noreferrer">
                                       <ExternalLink className="mr-2 h-4 w-4" />
                                       Open
-                                    </a>
+                                    </Link>
+                                  </Button>
+
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="bg-white/5 hover:bg-white/10 text-white"
+                                    asChild
+                                  >
+                                    <Link href={`/admin/analytics/share-link/${link.id}`}>
+                                      <BarChart2 className="mr-2 h-4 w-4" />
+                                      Analytics
+                                    </Link>
                                   </Button>
 
                                   <Button

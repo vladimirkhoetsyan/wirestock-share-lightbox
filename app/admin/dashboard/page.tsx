@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { type Lightbox, mockLightboxes } from "@/lib/mock-data"
-import { Edit, Trash2, Plus, ImageIcon, Video, Share2 } from "lucide-react"
+import { Edit, Trash2, Plus, ImageIcon, Video, Share2, BarChart2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 
@@ -204,12 +204,12 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="p-4 border-t border-white/10 flex justify-between mt-auto">
+                      <div className="p-4 border-t border-white/10 flex gap-2 mt-auto">
                         <Button
                           variant="secondary"
                           size="sm"
                           asChild
-                          className="w-[48%] bg-white/10 hover:bg-white/20 text-white"
+                          className="bg-white/10 hover:bg-white/20 text-white flex-1"
                         >
                           <Link href={`/admin/lightboxes/${lightbox.id}`}>
                             <Edit className="mr-2 h-4 w-4" />
@@ -217,10 +217,21 @@ export default function DashboardPage() {
                           </Link>
                         </Button>
                         <Button
+                          size="sm"
+                          asChild
+                          className="bg-white/10 hover:bg-white/20 text-white flex-1"
+                          title="View Analytics"
+                        >
+                          <Link href={`/admin/analytics/lightbox/${lightbox.id}`}>
+                            <BarChart2 className="mr-2 h-4 w-4" />
+                            Analytics
+                          </Link>
+                        </Button>
+                        <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDelete(lightbox.id)}
-                          className="w-[48%] bg-red-900/50 hover:bg-red-900/70 text-white"
+                          className="flex-1 bg-red-900/50 hover:bg-red-900/70 text-white"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import type { MediaItem } from "@/lib/mock-data"
 import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import ReactPlayer from "react-player"
+import { recordAnalyticsEvent } from '@/lib/analytics'
 
 interface MediaPreviewModalProps {
   isOpen: boolean
@@ -13,6 +15,22 @@ interface MediaPreviewModalProps {
   mediaItems: MediaItem[]
   initialIndex: number
   onRequestMore?: () => Promise<void>
+}
+
+// Helper: file extension mapping for media type
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+const VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "m4v", "avi", "mkv", "ogv", "3gp", "3g2", "hls", "m3u8"];
+
+function getMediaTypeFromUrl(url?: string): "image" | "video" | undefined {
+  if (!url) return undefined;
+  const extMatch = url.split("?")[0].split(".").pop();
+  if (!extMatch) return undefined;
+  const ext = extMatch.toLowerCase();
+  if (IMAGE_EXTENSIONS.includes(ext)) return "image";
+  if (VIDEO_EXTENSIONS.includes(ext)) return "video";
+  // HLS support
+  if (url.toLowerCase().includes(".m3u8")) return "video";
+  return undefined;
 }
 
 export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initialIndex, onRequestMore }: MediaPreviewModalProps) {
@@ -24,6 +42,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
   const [isLoading, setIsLoading] = useState(true)
 
   const currentItem = Array.isArray(mediaItems) && mediaItems.length > 0 && currentIndex >= 0 && currentIndex < mediaItems.length ? mediaItems[currentIndex] : undefined
+  const currentMediaType = getMediaTypeFromUrl(currentItem?.signedUrl || currentItem?.url || currentItem?.thumbnailUrl);
 
   useEffect(() => {
     setCurrentIndex(initialIndex)
@@ -101,11 +120,51 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
     }
   }, [currentItem, isPlaying])
 
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout | null = null;
+    let lastReported = 0;
+    if (isOpen && currentMediaType === 'video' && currentItem) {
+      // Video play event
+      if (isPlaying && currentTime === 0) {
+        recordAnalyticsEvent({
+          event: 'video_play',
+          media_item_id: currentItem.id,
+        });
+      }
+      // Video end event
+      if (!isPlaying && currentTime > 0 && Math.abs(currentTime - duration) < 1) {
+        recordAnalyticsEvent({
+          event: 'video_end',
+          media_item_id: currentItem.id,
+        });
+      }
+      // Periodic watch progress
+      if (isPlaying) {
+        progressInterval = setInterval(() => {
+          if (currentTime - lastReported >= 5) {
+            recordAnalyticsEvent({
+              event: 'video_watch_progress',
+              media_item_id: currentItem.id,
+              duration_ms: Math.floor(currentTime * 1000),
+            });
+            lastReported = currentTime;
+          }
+        }, 1000);
+      }
+    }
+    return () => {
+      if (progressInterval) clearInterval(progressInterval);
+    };
+  }, [isPlaying, currentTime, duration, isOpen, currentMediaType, currentItem]);
+
   if (!isOpen || !currentItem) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[98vw] w-full max-h-screen p-0 bg-black/95 text-white overflow-auto border-none rounded-xl">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent
+        className="max-w-[98vw] w-full max-h-screen p-0 bg-[#18181B] text-white overflow-auto border-none rounded-xl shadow-2xl z-[10050] flex items-center justify-center"
+        style={{ minHeight: 400 }}
+      >
         <DialogTitle className="sr-only">{currentItem.title || "Media Preview"}</DialogTitle>
         <div className="relative flex flex-col w-full max-h-screen min-h-[60vh]">
           {/* Close button */}
@@ -131,7 +190,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                 >
                   <div className="w-12 h-12 rounded-full border-4 border-white/10 border-t-white animate-spin"></div>
                 </motion.div>
-              ) : currentItem.type === "image" ? (
+              ) : currentMediaType === "image" ? (
                 <motion.img
                   key={`image-${currentIndex}`}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -142,7 +201,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   alt={currentItem.title}
                   className="max-h-screen max-w-full w-auto h-auto object-contain"
                 />
-              ) : (
+              ) : currentMediaType === "video" ? (
                 <motion.div
                   key={`video-${currentIndex}`}
                   initial={{ opacity: 0 }}
@@ -151,13 +210,29 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   transition={{ duration: 0.3 }}
                   className="relative w-full h-full flex items-center justify-center"
                 >
-                  <img
-                    src={currentItem.signedUrl || currentItem.thumbnailUrl || "/placeholder.svg"}
-                    alt={currentItem.title}
-                    className="max-h-screen max-w-full w-auto h-auto object-contain"
+                  <ReactPlayer
+                    url={currentItem.signedUrl || currentItem.url}
+                    playing={isPlaying}
+                    muted={isMuted}
+                    controls
+                    width="100%"
+                    height="100%"
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                    onProgress={({ playedSeconds }) => setCurrentTime(playedSeconds)}
+                    onDuration={setDuration}
+                    onReady={() => setIsLoading(false)}
+                    config={{
+                      file: {
+                        attributes: {
+                          poster: currentItem.thumbnailUrl || undefined,
+                        },
+                      },
+                    }}
                   />
                 </motion.div>
-              )}
+              ) : null}
             </AnimatePresence>
 
             {/* Navigation arrows */}
@@ -166,6 +241,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
               size="icon"
               className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70"
               onClick={handlePrevious}
+              disabled={currentIndex === 0}
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -174,6 +250,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
               size="icon"
               className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70"
               onClick={handleNext}
+              disabled={currentIndex === mediaItems.length - 1}
             >
               <ChevronRight className="h-6 w-6" />
             </Button>

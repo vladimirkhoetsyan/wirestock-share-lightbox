@@ -10,6 +10,21 @@ import { Play, Lock, ArrowLeft, Eye } from "lucide-react"
 import MediaPreviewModal from "@/components/media-preview-modal"
 import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
+import { recordAnalyticsEvent } from '@/lib/analytics'
+
+// Helper: file extension mapping for media type
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+const VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "m4v", "avi", "mkv", "ogv", "3gp", "3g2", "hls", "m3u8"];
+function getMediaTypeFromUrl(url?: string): "image" | "video" | undefined {
+  if (!url) return undefined;
+  const extMatch = url.split("?")[0].split(".").pop();
+  if (!extMatch) return undefined;
+  const ext = extMatch.toLowerCase();
+  if (IMAGE_EXTENSIONS.includes(ext)) return "image";
+  if (VIDEO_EXTENSIONS.includes(ext)) return "video";
+  if (url.toLowerCase().includes(".m3u8")) return "video";
+  return undefined;
+}
 
 export default function SharePage() {
   const params = useParams();
@@ -35,7 +50,7 @@ export default function SharePage() {
         const linkRes = await fetch(`/api/share-links/by-token/${encodeURIComponent(token)}`)
         if (!linkRes.ok) throw new Error("Share link not found")
         const link = await linkRes.json()
-          setShareLink(link)
+        setShareLink(link)
         // Check for access token in localStorage
         let accessToken = null
         let isValidToken = false
@@ -47,8 +62,8 @@ export default function SharePage() {
               const payload = JSON.parse(atob(accessToken.split('.')[1]))
               if (payload.exp && Date.now() / 1000 < payload.exp) {
                 isValidToken = true
-            setIsAuthenticated(true)
-          }
+                setIsAuthenticated(true)
+              }
             } catch {}
           }
         } else {
@@ -62,6 +77,11 @@ export default function SharePage() {
           if (!lbRes.ok) throw new Error("Lightbox not found")
           const lb = await lbRes.json()
           setLightbox(lb)
+          // Trigger analytics event for lightbox open
+          recordAnalyticsEvent({
+            event: 'lightbox_open',
+            share_link_id: link.id,
+          });
         } else {
           setLightbox(null)
         }
@@ -69,7 +89,7 @@ export default function SharePage() {
         setShareLink(null)
         setLightbox(null)
       } finally {
-      setIsLoading(false)
+        setIsLoading(false)
       }
     }
     fetchShareData()
@@ -110,6 +130,13 @@ export default function SharePage() {
   const handleMediaClick = (index: any) => {
     setSelectedMediaIndex(index)
     setIsPreviewOpen(true)
+    if (lightbox && lightbox.mediaItems && lightbox.mediaItems[index]) {
+      recordAnalyticsEvent({
+        event: 'media_click',
+        share_link_id: shareLink?.id,
+        media_item_id: lightbox.mediaItems[index].id,
+      });
+    }
   }
 
   const handleClosePreview = () => {
@@ -274,31 +301,34 @@ export default function SharePage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="media-grid">
-          {lightbox.mediaItems.map((item: any, index: any) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.05 }}
-              className="media-item"
-              onClick={() => handleMediaClick(index)}
-            >
-              <img src={item.signedUrl || item.thumbnailUrl || "/placeholder.svg"} alt={item.title} />
-              {item.type === "video" && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
-                    <Play className="h-6 w-6 text-white" />
+          {lightbox.mediaItems.map((item: any, index: any) => {
+            const mediaType = getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl);
+            return (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.05 }}
+                className="media-item"
+                onClick={() => handleMediaClick(index)}
+              >
+                <img src={mediaType === "video" ? (item.thumbnailUrl || "/video-placeholder.svg") : (item.signedUrl || item.thumbnailUrl || "/placeholder.svg")} alt={item.title} />
+                {mediaType === "video" && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
+                      <Play className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="media-item-overlay">
-                {item.title && !/^s3:\/\//.test(item.title) && !/^https?:\/\//.test(item.title) && (
-                  <h3 className="font-medium text-white">{item.title}</h3>
                 )}
-                {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
-              </div>
-            </motion.div>
-          ))}
+                <div className="media-item-overlay">
+                  {item.title && !/^s3:\/\//.test(item.title) && !/^https?:\/\//.test(item.title) && (
+                    <h3 className="font-medium text-white">{item.title}</h3>
+                  )}
+                  {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </main>
 
