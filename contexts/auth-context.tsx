@@ -106,7 +106,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, register, fetchCurrentUser, logout, loading }}>
-      {loading ? <div>Loading...</div> : children}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-[#0a0a0c]">
+          <div className="mb-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+              <span className="text-white text-2xl font-bold">W</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-2">Wirestock Lightbox</h1>
+            <p className="text-muted-foreground">Loading your experience...</p>
+          </div>
+          <div className="w-12 h-12 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin mx-auto"></div>
+        </div>
+      ) : children}
     </AuthContext.Provider>
   )
 }
