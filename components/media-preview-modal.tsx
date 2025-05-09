@@ -157,6 +157,20 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
     };
   }, [isPlaying, currentTime, duration, isOpen, currentMediaType, currentItem]);
 
+  // Keyboard navigation for next/prev
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        if (currentIndex > 0) handlePrevious();
+      } else if (e.key === 'ArrowRight') {
+        if (currentIndex < mediaItems.length - 1) handleNext();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, currentIndex, mediaItems.length]);
+
   if (!isOpen || !currentItem) return null
 
   return (
