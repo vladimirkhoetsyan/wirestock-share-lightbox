@@ -610,7 +610,7 @@ export default function LightboxEditPage() {
                 className="bg-white/10 hover:bg-white/20 text-white mr-2"
                 title="View Analytics"
               >
-                <Link href={`/admin/analytics/lightbox/${typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : ''}`}>
+                <Link href={`/admin/analytics/lightbox/${typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : ''}?from=lightbox`}>
                   <BarChart2 className="mr-2 h-4 w-4" />
                   Analytics
                 </Link>
@@ -1055,7 +1055,7 @@ export default function LightboxEditPage() {
                                     className="bg-white/5 hover:bg-white/10 text-white"
                                     asChild
                                   >
-                                    <Link href={`/admin/analytics/share-link/${link.id}`}>
+                                    <Link href={`/admin/analytics/share-link/${link.id}?from=lightbox&lightboxId=${lightbox.id}`}>
                                       <BarChart2 className="mr-2 h-4 w-4" />
                                       Analytics
                                     </Link>
