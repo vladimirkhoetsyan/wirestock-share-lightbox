@@ -196,6 +196,33 @@ async function fetchMediaItemAnalytics(mediaItemId: string) {
   return res.json();
 }
 
+// Helper: fetch analytics for a share link
+async function fetchShareLinkAnalytics(shareLinkId: string) {
+  const res = await fetch(`/api/admin/analytics/share-link/${shareLinkId}`);
+  if (!res.ok) throw new Error("Failed to fetch share link analytics");
+  return res.json();
+}
+
+// Helper: format seconds as human readable
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds < 1) return '0s';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return [
+    h ? `${h}h` : '',
+    m ? `${m}m` : '',
+    s ? `${s}s` : ''
+  ].filter(Boolean).join(' ');
+}
+
+// Helper: get filename from S3 URI or URL
+function getFilename(uri: string): string {
+  if (!uri) return '';
+  const parts = uri.split('/');
+  return parts[parts.length - 1];
+}
+
 function combineRefs(...refs: any[]) {
   return (node: any) => {
     refs.forEach(ref => {
@@ -235,6 +262,9 @@ export default function LightboxEditPage() {
   // Media item analytics state
   const [mediaAnalytics, setMediaAnalytics] = useState<Record<string, any>>({});
   const [mediaAnalyticsLoading, setMediaAnalyticsLoading] = useState<Record<string, boolean>>({});
+  // Share link analytics state
+  const [shareLinkAnalytics, setShareLinkAnalytics] = useState<Record<string, any>>({});
+  const [shareLinkAnalyticsLoading, setShareLinkAnalyticsLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -322,6 +352,24 @@ export default function LightboxEditPage() {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedMediaItems]);
+
+  // Fetch analytics for displayed share links
+  useEffect(() => {
+    if (!lightbox?.shareLinks) return;
+    const idsToFetch = lightbox.shareLinks.filter((link: any) => !shareLinkAnalytics[link.id] && !shareLinkAnalyticsLoading[link.id]);
+    if (idsToFetch.length === 0) return;
+    const newLoading: Record<string, boolean> = {};
+    idsToFetch.forEach((link: any) => { newLoading[link.id] = true; });
+    setShareLinkAnalyticsLoading(prev => ({ ...prev, ...newLoading }));
+    Promise.all(idsToFetch.map(async (link: any) => {
+      try {
+        const data = await fetchShareLinkAnalytics(link.id);
+        setShareLinkAnalytics(prev => ({ ...prev, [link.id]: data }));
+      } catch {}
+      setShareLinkAnalyticsLoading(prev => ({ ...prev, [link.id]: false }));
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightbox?.shareLinks]);
 
   if (!lightbox && !isLoading) {
     return (
@@ -1020,115 +1068,108 @@ export default function LightboxEditPage() {
                       ) : (
                         <ScrollArea className="h-[400px] pr-4">
                           <div className="space-y-4">
-                            {lightbox.shareLinks?.map((link: any, idx: number) => (
-                              <div key={link.id} className="glass-card rounded-xl p-4">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div>
-                                    <h3 className="font-medium text-lg text-white">{link.name}</h3>
-                                    <p className="text-sm text-gray-400">
-                                      Created on {new Date(link.createdAt).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                  {link.isPasswordProtected ? (
-                                    <Badge
-                                      variant="outline"
-                                      className="flex items-center gap-1 border-white/20 text-white"
-                                    >
-                                      <Lock className="h-3 w-3" />
-                                      Password Protected
-                                    </Badge>
-                                  ) : (
-                                    <Badge
-                                      variant="outline"
-                                      className="flex items-center gap-1 border-white/20 text-white"
-                                    >
-                                      <Unlock className="h-3 w-3" />
-                                      Public
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                  <div className="glass-card p-3 rounded-lg flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                                      <Eye className="h-4 w-4 text-blue-400" />
-                                    </div>
+                            {lightbox.shareLinks?.map((link: any, idx: number) => {
+                              const analytics = shareLinkAnalytics[link.id];
+                              const loading = shareLinkAnalyticsLoading[link.id];
+                              // Compute interactions sum
+                              const interactions = analytics?.mostInteractedItems?.reduce((sum: number, item: any) => sum + (item.count ?? 0), 0) ?? 0;
+                              const topItem = analytics?.mostInteractedItems?.[0];
+                              return (
+                                <div key={link.id} className="glass-card rounded-xl p-4">
+                                  <div className="flex justify-between items-start mb-3">
                                     <div>
-                                      <p className="text-sm text-gray-400">Views</p>
-                                      <p className="font-medium text-white">{link.analytics?.totalViews ?? 0}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="glass-card p-3 rounded-lg flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                                      <MousePointer className="h-4 w-4 text-purple-400" />
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-gray-400">Interactions</p>
-                                      <p className="font-medium text-white">{link.analytics?.mediaInteractions ?? 0}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="glass-card p-3 rounded-lg flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                                      <Clock className="h-4 w-4 text-green-400" />
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-gray-400">Avg. Time</p>
-                                      <p className="font-medium text-white">
-                                        {link.analytics?.timeSpentPerMedia ?? 0}s per item
+                                      <h3 className="font-medium text-lg text-white">{link.name}</h3>
+                                      <p className="text-sm text-gray-400">
+                                        Created on {new Date(link.createdAt).toLocaleDateString()}
                                       </p>
                                     </div>
+                                    {link.isPasswordProtected ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="flex items-center gap-1 border-white/20 text-white"
+                                      >
+                                        <Lock className="h-3 w-3" />
+                                        Password Protected
+                                      </Badge>
+                                    ) : (
+                                      <Badge
+                                        variant="outline"
+                                        className="flex items-center gap-1 border-white/20 text-white"
+                                      >
+                                        <Unlock className="h-3 w-3" />
+                                        Public
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {/* Analytics badges row */}
+                                  <div className="flex flex-wrap gap-2 mb-4 mt-2">
+                                    {loading ? (
+                                      <span className="text-xs text-gray-400 animate-pulse">Loading analytics...</span>
+                                    ) : analytics ? (
+                                      <>
+                                        <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-blue-300">
+                                          <Eye className="h-3 w-3" /> {analytics.totalViews ?? 0} Views
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-purple-300">
+                                          <BarChart2 className="h-3 w-3" /> {analytics.totalSessions ?? 0} Sessions
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-yellow-300">
+                                          <MousePointer className="h-3 w-3" /> {interactions} Interactions
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-green-300">
+                                          <Clock className="h-3 w-3" /> {formatDuration(analytics.avgSessionDuration ?? 0)} Avg. Session
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-cyan-300">
+                                          <Video className="h-3 w-3" /> {analytics.uniqueDevices ?? 0} Devices
+                                        </span>
+                                      </>
+                                    ) : null}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      className="bg-white/5 hover:bg-white/10 text-white"
+                                      onClick={() => copyShareLink(link.token)}
+                                    >
+                                      <Copy className="mr-2 h-4 w-4" />
+                                      Copy Link
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      className="bg-white/5 hover:bg-white/10 text-white"
+                                      asChild
+                                    >
+                                      <Link href={`/share/${link.token}`} target="_blank" rel="noreferrer">
+                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                        Open
+                                      </Link>
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      className="bg-white/5 hover:bg-white/10 text-white"
+                                      asChild
+                                    >
+                                      <Link href={`/admin/analytics/share-link/${link.id}?from=lightbox&lightboxId=${lightbox.id}`}>
+                                        <BarChart2 className="mr-2 h-4 w-4" />
+                                        Analytics
+                                      </Link>
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => handleRevokeShareLink(link.id)}
+                                      className="ml-auto bg-red-900/30 hover:bg-red-900/50 text-white"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Revoke
+                                    </Button>
                                   </div>
                                 </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="bg-white/5 hover:bg-white/10 text-white"
-                                    onClick={() => copyShareLink(link.token)}
-                                  >
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Copy Link
-                                  </Button>
-
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="bg-white/5 hover:bg-white/10 text-white"
-                                    asChild
-                                  >
-                                    <Link href={`/share/${link.token}`} target="_blank" rel="noreferrer">
-                                      <ExternalLink className="mr-2 h-4 w-4" />
-                                      Open
-                                    </Link>
-                                  </Button>
-
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="bg-white/5 hover:bg-white/10 text-white"
-                                    asChild
-                                  >
-                                    <Link href={`/admin/analytics/share-link/${link.id}?from=lightbox&lightboxId=${lightbox.id}`}>
-                                      <BarChart2 className="mr-2 h-4 w-4" />
-                                      Analytics
-                                    </Link>
-                                  </Button>
-
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleRevokeShareLink(link.id)}
-                                    className="ml-auto bg-red-900/30 hover:bg-red-900/50 text-white"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Revoke
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </ScrollArea>
                       )}

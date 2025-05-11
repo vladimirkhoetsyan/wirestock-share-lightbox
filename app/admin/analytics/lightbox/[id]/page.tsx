@@ -15,6 +15,19 @@ import ModernHeader from "@/components/modern-header";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+// Helper: format seconds as human readable
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds < 1) return '0s';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return [
+    h ? `${h}h` : '',
+    m ? `${m}m` : '',
+    s ? `${s}s` : ''
+  ].filter(Boolean).join(' ');
+}
+
 export default function LightboxAnalyticsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -100,7 +113,7 @@ export default function LightboxAnalyticsPage() {
                   <span className="text-gray-300 mt-2">Unique Devices</span>
                 </Card>
                 <Card className="glass-card p-6 flex flex-col items-center">
-                  <span className="text-2xl font-bold text-yellow-400">{analytics.avgSessionDuration}s</span>
+                  <span className="text-2xl font-bold text-yellow-400">{formatDuration(analytics.avgSessionDuration)}</span>
                   <span className="text-gray-300 mt-2">Avg. Session Duration</span>
                 </Card>
               </div>
