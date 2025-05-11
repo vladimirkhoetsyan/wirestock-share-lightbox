@@ -3,13 +3,42 @@
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { LogOut, Menu, X } from "lucide-react"
-import { useState } from "react"
+import { LogOut, Menu, X, Bell, ExternalLink } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function ModernHeader() {
   const { logout, isAuthenticated } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifRef = useRef(null)
+  const { notifications, unreadCount, loading, error, fetchNotifications, setNotifications } = useNotifications()
+  const unseenCount = typeof unreadCount === 'number' ? unreadCount : notifications.filter((n: any) => !n.seen).length
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !(notifRef.current as any).contains(e.target)) {
+        setNotifOpen(false)
+      }
+    }
+    if (notifOpen) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [notifOpen])
+
+  // Refetch on open
+  useEffect(() => { if (notifOpen) fetchNotifications() }, [notifOpen])
+
+  async function markAsSeen(id: string) {
+    const token = localStorage.getItem("token")
+    if (!token) return
+    await fetch(`/api/admin/notifications/${id}`, {
+      method: "PATCH",
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ seen: true })
+    })
+    setNotifications((prev: any) => prev.map((n: any) => n.id === id ? { ...n, seen: true, seenAt: new Date().toISOString() } : n))
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
@@ -27,6 +56,54 @@ export default function ModernHeader() {
               <Button variant="ghost" size="sm" asChild className="text-white hover:bg-white/10">
                 <Link href="/admin/dashboard">Dashboard</Link>
               </Button>
+              {/* Notification bell - before logout */}
+              <div className="relative" ref={notifRef}>
+                <Button variant="ghost" size="icon" className="text-white" onClick={() => setNotifOpen((v) => !v)}>
+                  <Bell className="h-6 w-6" />
+                  {unseenCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center border-2 border-black">{unseenCount >= 10 ? '9+' : unseenCount}</span>
+                  )}
+                </Button>
+                {notifOpen && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.2 }} className="absolute right-0 mt-2 w-96 max-w-[90vw] glass-card rounded-xl shadow-lg border border-white/10 bg-black/90 z-50">
+                    <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                      <span className="font-bold text-white">Notifications</span>
+                      {loading && <span className="text-xs text-gray-400">Loading...</span>}
+                    </div>
+                    <div className="max-h-96 overflow-y-auto divide-y divide-white/10">
+                      {notifications.length === 0 && (
+                        <div className="p-4 text-gray-400 text-center">No notifications</div>
+                      )}
+                      {notifications.map((n: any) => (
+                        <div
+                          key={n.id}
+                          className={`w-full text-left px-4 py-3 hover:bg-white/5 transition flex flex-col relative ${!n.seen ? 'bg-blue-500/10' : ''}`}
+                          onClick={() => markAsSeen(n.id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-white">{n.lightboxName || 'Lightbox'}</span>
+                            <span className="text-xs text-gray-400 ml-2">{n.enteredAtRelative}</span>
+                          </div>
+                          <div className="text-sm text-gray-300">{n.shareLinkName}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs ${n.seen ? 'text-green-400' : 'text-blue-400'}`}>{n.seen ? 'Seen' : 'New'}</span>
+                            {n.passwordCorrect && <span className="text-xs text-yellow-400">Password Correct</span>}
+                          </div>
+                          <ExternalLink
+                            className="absolute right-4 bottom-3 text-blue-400 hover:text-blue-300 cursor-pointer"
+                            size={18}
+                            onClick={e => { e.stopPropagation(); window.open(n.analyticsLink, '_blank'); }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-2 border-t border-white/10 text-center">
+                      <Link href="/admin/notifications" className="text-blue-400 hover:underline text-sm font-medium">View all notifications</Link>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -78,4 +155,37 @@ export default function ModernHeader() {
       </div>
     </header>
   )
+}
+
+function useNotifications() {
+  const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState<number | undefined>(undefined)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const fetchNotifications = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+      const res = await fetch("/api/admin/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error("Failed to fetch notifications")
+      const data = await res.json()
+      setNotifications(data.notifications || [])
+      setUnreadCount(data.unreadCount)
+    } catch (e) {
+      setError(e as any)
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => { fetchNotifications() }, [])
+  // Poll every 30s
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [])
+  return { notifications, unreadCount, loading, error, fetchNotifications, setNotifications }
 }

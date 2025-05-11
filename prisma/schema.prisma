@@ -16,27 +16,28 @@ model analytics {
   duration_ms   Int?
   ip            String?
   user_agent    String?
-  session_id    String?      // uniquely identifies the viewer's session across multiple events
-  referrer      String?      // records the referring URL for understanding navigation context
-  screen_size   String?      // captures the viewport dimensions
-  geo_country   String?      // country code from IP geolocation
-  geo_region    String?      // region/state from IP geolocation
   created_at    DateTime?    @default(now()) @db.Timestamp(6)
+  referrer      String?
+  screen_size   String?
+  session_id    String?
+  geo_country   String?
+  geo_region    String?
   media_items   media_items? @relation(fields: [media_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   share_links   share_links? @relation(fields: [share_link_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model lightboxes {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
-  description String?
-  keywords    String[]
-  types       String[]
-  created_at  DateTime?     @default(now()) @db.Timestamp(6)
-  media_items media_items[]
-  share_links share_links[]
-  deleted     Boolean       @default(false)
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  description   String?
+  keywords      String[]
+  types         String[]
+  created_at    DateTime?      @default(now()) @db.Timestamp(6)
+  deleted       Boolean        @default(false)
+  media_items   media_items[]
+  notifications Notification[]
+  share_links   share_links[]
 }
 
 model media_items {
@@ -48,9 +49,9 @@ model media_items {
   dimensions       String?
   order            Int?        @default(0)
   created_at       DateTime?   @default(now()) @db.Timestamp(6)
+  deleted          Boolean     @default(false)
   analytics        analytics[]
   lightboxes       lightboxes? @relation(fields: [lightbox_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  deleted          Boolean     @default(false)
 }
 
 model sessions {
@@ -64,15 +65,16 @@ model sessions {
 }
 
 model share_links {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lightbox_id   String?     @db.Uuid
-  token         String      @unique
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lightbox_id   String?        @db.Uuid
+  token         String         @unique
   name          String
   password_hash String?
-  revoked       Boolean?    @default(false)
-  created_at    DateTime?   @default(now()) @db.Timestamp(6)
+  revoked       Boolean?       @default(false)
+  created_at    DateTime?      @default(now()) @db.Timestamp(6)
   analytics     analytics[]
-  lightboxes    lightboxes? @relation(fields: [lightbox_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  notifications Notification[]
+  lightboxes    lightboxes?    @relation(fields: [lightbox_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model users {
@@ -80,4 +82,38 @@ model users {
   email         String    @unique
   password_hash String
   created_at    DateTime? @default(now()) @db.Timestamp(6)
+  notificationReceipts NotificationReceipt[]
+}
+
+model Notification {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lightbox_id      String   @db.Uuid
+  share_link_id    String   @db.Uuid
+  session_id       String
+  entered_at       DateTime @default(now()) @db.Timestamp(6)
+  password_correct Boolean
+
+  // Relations
+  lightbox         lightboxes   @relation(fields: [lightbox_id], references: [id], onDelete: Cascade)
+  share_link       share_links  @relation(fields: [share_link_id], references: [id], onDelete: Cascade)
+  receipts         NotificationReceipt[]
+  @@index([lightbox_id])
+  @@index([share_link_id])
+  @@index([session_id])
+  @@map("notifications")
+}
+
+model NotificationReceipt {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notification_id  String   @db.Uuid
+  admin_user_id    String   @db.Uuid
+  seen             Boolean  @default(false)
+  seen_at          DateTime?
+
+  // Relations
+  notification     Notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  admin_user       users        @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
+  @@index([notification_id])
+  @@index([admin_user_id])
+  @@map("notification_receipts")
 }

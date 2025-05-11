@@ -71,6 +71,45 @@ export async function POST(req: NextRequest) {
         // created_at is handled by Prisma default
       },
     });
+
+    // --- Notification logic for lightbox_open ---
+    if (data.event === 'lightbox_open' && data.share_link_id) {
+      try {
+        // Fetch the share link and its lightbox
+        const shareLink = await prisma.share_links.findUnique({
+          where: { id: data.share_link_id },
+          include: { lightboxes: true },
+        });
+        if (shareLink && shareLink.lightbox_id && shareLink.lightboxes) {
+          // Create the notification event
+          const notification = await prisma.notification.create({
+            data: {
+              lightbox_id: shareLink.lightbox_id,
+              share_link_id: shareLink.id,
+              session_id: data.session_id || '',
+              password_correct: !!data.password_correct,
+              entered_at: new Date(),
+            },
+          });
+          // Fetch all admin users (assume all users are admins)
+          const admins = await prisma.users.findMany({ select: { id: true } });
+          // Create a NotificationReceipt for each user
+          await Promise.all(admins.map((user: { id: string }) =>
+            prisma.notificationReceipt.create({
+              data: {
+                notification_id: notification.id,
+                admin_user_id: user.id,
+                seen: false,
+              },
+            })
+          ));
+        }
+      } catch (notifErr) {
+        // Log but do not block analytics event creation
+        console.error('Notification creation error:', notifErr);
+      }
+    }
+
     return NextResponse.json({ success: true, id: analytics.id });
   } catch (e) {
     console.error('Analytics event error:', e);

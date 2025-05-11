@@ -173,6 +173,18 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, currentIndex, mediaItems.length]);
 
+  // Fire analytics event for every media item view in the modal
+  useEffect(() => {
+    if (isOpen && currentItem && currentItem.id) {
+      recordAnalyticsEvent({
+        event: 'media_click',
+        media_item_id: currentItem.id,
+      });
+    }
+    // Only fire when modal is open and item changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, currentIndex]);
+
   if (!isOpen || !currentItem) return null
 
   return (

@@ -130,13 +130,6 @@ export default function SharePage() {
   const handleMediaClick = (index: any) => {
     setSelectedMediaIndex(index)
     setIsPreviewOpen(true)
-    if (lightbox && lightbox.mediaItems && lightbox.mediaItems[index]) {
-      recordAnalyticsEvent({
-        event: 'media_click',
-        share_link_id: shareLink?.id,
-        media_item_id: lightbox.mediaItems[index].id,
-      });
-    }
   }
 
   const handleClosePreview = () => {
