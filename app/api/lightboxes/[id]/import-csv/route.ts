@@ -3,12 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { parse } from 'csv-parse/sync';
 import { getSignedS3Url } from '@/lib/s3';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 // POST /api/lightboxes/[id]/import-csv
 export async function POST(req: NextRequest, contextPromise: Promise<{ params: { id: string } }>) {
   const { params } = await contextPromise;

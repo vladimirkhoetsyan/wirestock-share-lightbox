@@ -14,6 +14,7 @@ import "leaflet/dist/leaflet.css";
 import ModernHeader from "@/components/modern-header";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import dynamic from "next/dynamic";
 
 // Helper: format seconds as human readable
 function formatDuration(seconds: number): string {
@@ -27,6 +28,8 @@ function formatDuration(seconds: number): string {
     s ? `${s}s` : ''
   ].filter(Boolean).join(' ');
 }
+
+const ActivityMap = dynamic(() => import("./ActivityMap"), { ssr: false });
 
 export default function ShareLinkAnalyticsPage() {
   const params = useParams();
@@ -174,77 +177,7 @@ export default function ShareLinkAnalyticsPage() {
               {/* Geolocation Map Widget */}
               <div className="glass-card rounded-xl p-6 mt-10">
                 <h2 className="text-xl font-bold text-white mb-4">Activity Map</h2>
-                <div style={{ height: 400, width: "100%" }} className="relative z-10">
-                  {analytics.activityLocations && analytics.activityLocations.length > 0 ? (
-                    <MapContainer center={[20, 0]} zoom={2} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <MarkerClusterGroup>
-                        {/* Aggregate unknown countries */}
-                        {(() => {
-                          let unknownCount = 0;
-                          let unknownRegions: string[] = [];
-                          analytics.activityLocations.forEach((loc: any) => {
-                            const code = (loc.country || '').toUpperCase().trim();
-                            const centroid = (countryCentroids as Record<string, { lat: number; lng: number }>)[code];
-                            if (!loc.country || !centroid) {
-                              unknownCount += loc.count;
-                              if (loc.region) unknownRegions.push(loc.region);
-                            }
-                          });
-                          if (unknownCount > 0) {
-                            return (
-                              <CircleMarker
-                                key="unknown"
-                                center={[0, -160]} // Pacific Ocean fallback location
-                                radius={8 + Math.log2(unknownCount) * 4}
-                                pathOptions={{ color: "#f59e42", fillColor: "#f59e42", fillOpacity: 0.6 }}
-                              >
-                                <LeafletTooltip>
-                                  <span className="text-xs">
-                                    <b>Unknown or Unmapped</b><br />
-                                    {unknownCount} activities<br />
-                                    {unknownRegions.length > 0 && (
-                                      <span>Regions: {unknownRegions.join(", ")}</span>
-                                    )}
-                                  </span>
-                                </LeafletTooltip>
-                              </CircleMarker>
-                            );
-                          }
-                          return null;
-                        })()}
-                        {/* Known countries */}
-                        {analytics.activityLocations.map((loc: any, idx: number) => {
-                          const code = (loc.country || '').toUpperCase().trim();
-                          const centroid = (countryCentroids as Record<string, { lat: number; lng: number }>)[code];
-                          if (!loc.country || !centroid) return null;
-                          const { lat, lng } = centroid;
-                          // @ts-ignore
-                          return (
-                            <CircleMarker
-                              key={idx}
-                              center={[lat, lng]}
-                              radius={6 + Math.log2(loc.count) * 4}
-                              pathOptions={{ color: "#6366F1", fillColor: "#6366F1", fillOpacity: 0.5 }}
-                            >
-                              <LeafletTooltip>
-                                <span className="text-xs">
-                                  <b>{loc.country}</b>{loc.region ? `, ${loc.region}` : ""}<br />
-                                  {loc.count} activities
-                                </span>
-                              </LeafletTooltip>
-                            </CircleMarker>
-                          );
-                        })}
-                      </MarkerClusterGroup>
-                    </MapContainer>
-                  ) : (
-                    <div className="text-gray-400">No geolocation data available.</div>
-                  )}
-                </div>
+                <ActivityMap activityLocations={analytics.activityLocations} countryCentroids={countryCentroids} />
               </div>
 
               {/* Media Preview Modal */}
@@ -254,6 +187,7 @@ export default function ShareLinkAnalyticsPage() {
                   onClose={() => setPreviewOpen(false)}
                   mediaItems={analytics.mostInteractedItems || []}
                   initialIndex={previewIndex}
+                  shareLinkId={shareLinkId || ""}
                 />
               )}
             </>

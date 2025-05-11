@@ -168,58 +168,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mb-12">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <h1 className="text-4xl font-bold mb-2 text-white">Your Lightbox Collections</h1>
-                <p className="text-gray-300 mb-8">
-                  Manage and share your media collections with clients and collaborators
-                </p>
-              </motion.div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="stats-item"
-                >
-                  <span className="stats-number">{lightboxes.length}</span>
-                  <span className="stats-label">Lightboxes</span>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className="stats-item"
-                >
-                  <span className="stats-number">{totalMediaItems}</span>
-                  <span className="stats-label">Media Items</span>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  className="stats-item"
-                >
-                  <span className="stats-number">{totalViews}</span>
-                  <span className="stats-label">Total Views</span>
-                </motion.div>
-              </div>
-
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">All Lightboxes</h2>
-                <Button
-                  asChild
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
-                >
-                  <Link href="/admin/lightboxes/new">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create New Lightbox
-                  </Link>
-                </Button>
-              </div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">All Lightboxes</h2>
+              <Button
+                asChild
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+              >
+                <Link href="/admin/lightboxes/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create New Lightbox
+                </Link>
+              </Button>
             </div>
 
             {isLoading ? (
