@@ -81,6 +81,7 @@ export default function SharePage() {
           recordAnalyticsEvent({
             event: 'lightbox_open',
             share_link_id: link.id,
+            password_correct: true,
           });
         } else {
           setLightbox(null)
@@ -117,6 +118,12 @@ export default function SharePage() {
         if (lbRes.ok) {
           const lb = await lbRes.json()
           setLightbox(lb)
+          // Trigger analytics event for lightbox open (for password-protected links)
+          recordAnalyticsEvent({
+            event: 'lightbox_open',
+            share_link_id: shareLink.id,
+            password_correct: true,
+          });
         }
       } else {
         toast({ title: "Incorrect password", description: "Please try again with the correct password", variant: "destructive" })

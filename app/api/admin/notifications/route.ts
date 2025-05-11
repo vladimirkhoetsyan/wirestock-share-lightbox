@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { verifyJwt } from 'lib/auth-server';
 import Fuse from 'fuse.js';
+// @ts-ignore
+const fetch = require('node-fetch');
+import { createNotificationWithReceiptsAndSlack } from 'lib/notification';
 
 // GET /api/admin/notifications?limit=10&page=1&seen=true&dateFrom=2024-05-01&dateTo=2024-05-10&lightboxId=...&shareLinkId=...&q=search
 export async function GET(req: NextRequest) {
@@ -43,7 +46,7 @@ export async function GET(req: NextRequest) {
   // Find receipts for this user with filters
   let receipts = await prisma.notificationReceipt.findMany({
     where,
-    orderBy: { id: 'desc' },
+    orderBy: { notification: { entered_at: 'desc' } },
     include: { notification: { include: { lightbox: true, share_link: true } } },
   });
 
@@ -134,28 +137,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
   try {
-    // Create the notification event
-    const notification = await prisma.notification.create({
-      data: {
-        lightbox_id,
-        share_link_id,
-        session_id,
-        password_correct,
-        entered_at: new Date(),
-      },
+    const { notification, receipts } = await createNotificationWithReceiptsAndSlack({
+      lightbox_id,
+      share_link_id,
+      session_id,
+      password_correct,
+      entered_at: new Date(),
+      sendSlack: true,
     });
-    // Fetch all users
-    const users = await prisma.users.findMany({ select: { id: true } });
-    // Create a NotificationReceipt for each user
-    const receipts = await Promise.all(users.map((user: { id: string }) =>
-      prisma.notificationReceipt.create({
-        data: {
-          notification_id: notification.id,
-          admin_user_id: user.id,
-          seen: false,
-        },
-      })
-    ));
     return NextResponse.json({ notification, receipts });
   } catch (e) {
     return NextResponse.json({ error: 'Failed to create notification', debug: String(e) }, { status: 500 });
