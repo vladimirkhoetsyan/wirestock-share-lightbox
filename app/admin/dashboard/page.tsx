@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { type Lightbox, mockLightboxes } from "@/lib/mock-data"
-import { Edit, Trash2, Plus, ImageIcon, Video, Share2, BarChart2 } from "lucide-react"
+import { Edit, Trash2, Plus, ImageIcon, Video, Share2, BarChart2, Users, Timer, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 
@@ -30,11 +30,26 @@ async function deleteLightbox(id: string, token: string) {
   return res.json()
 }
 
+// Add helper to format seconds to human readable
+function formatDuration(seconds: number) {
+  if (!seconds || seconds < 1) return '0s';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return [
+    h ? `${h}h` : null,
+    m ? `${m}m` : null,
+    s ? `${s}s` : null,
+  ].filter(Boolean).join(' ');
+}
+
 export default function DashboardPage() {
   const [lightboxes, setLightboxes] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { toast } = useToast()
+  const [analytics, setAnalytics] = useState<Record<string, any>>({})
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -44,6 +59,26 @@ export default function DashboardPage() {
       .catch(() => toast({ title: "Error", description: "Failed to load lightboxes", variant: "destructive" }))
       .finally(() => setIsLoading(false))
   }, [])
+
+  useEffect(() => {
+    async function fetchAllAnalytics() {
+      setAnalyticsLoading(true)
+      const results: Record<string, any> = {}
+      await Promise.all(
+        lightboxes.map(async (lb: any) => {
+          try {
+            const res = await fetch(`/api/admin/analytics/lightbox/${lb.id}`)
+            if (res.ok) {
+              results[lb.id] = await res.json()
+            }
+          } catch {}
+        })
+      )
+      setAnalytics(results)
+      setAnalyticsLoading(false)
+    }
+    if (lightboxes.length > 0) fetchAllAnalytics()
+  }, [lightboxes])
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this lightbox? This action cannot be undone.")) {
@@ -189,6 +224,40 @@ export default function DashboardPage() {
                             <Badge variant="secondary" className="bg-white/10 text-xs text-white">
                               +{lightbox.keywords?.length - 3} more
                             </Badge>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {analyticsLoading || !analytics[lightbox.id] ? (
+                            <>
+                              <div className="h-6 w-20 bg-white/10 rounded animate-pulse" />
+                              <div className="h-6 w-20 bg-white/10 rounded animate-pulse" />
+                              <div className="h-6 w-20 bg-white/10 rounded animate-pulse" />
+                              <div className="h-6 w-20 bg-white/10 rounded animate-pulse" />
+                              <div className="h-6 w-20 bg-white/10 rounded animate-pulse" />
+                              <div className="h-6 w-20 bg-white/10 rounded animate-pulse" />
+                            </>
+                          ) : (
+                            <>
+                              <Badge variant="outline" className="flex items-center gap-1 border-white/20 text-white">
+                                <Eye className="h-3 w-3" /> {analytics[lightbox.id].totalViews} Views
+                              </Badge>
+                              <Badge variant="outline" className="flex items-center gap-1 border-white/20 text-white">
+                                <BarChart2 className="h-3 w-3" /> {analytics[lightbox.id].totalSessions} Sessions
+                              </Badge>
+                              <Badge variant="outline" className="flex items-center gap-1 border-white/20 text-white">
+                                <Users className="h-3 w-3" /> {analytics[lightbox.id].uniqueDevices} Devices
+                              </Badge>
+                              <Badge variant="outline" className="flex items-center gap-1 border-white/20 text-white">
+                                <Timer className="h-3 w-3" /> {formatDuration(analytics[lightbox.id].avgSessionDuration)} Avg. Session
+                              </Badge>
+                              <Badge variant="outline" className="flex items-center gap-1 border-white/20 text-white">
+                                <Share2 className="h-3 w-3" /> {lightbox.shareLinkCount} Shares
+                              </Badge>
+                              <Badge variant="outline" className="flex items-center gap-1 border-white/20 text-white">
+                                <ImageIcon className="h-3 w-3" /> {lightbox.mediaItemCount} Items
+                              </Badge>
+                            </>
                           )}
                         </div>
 
