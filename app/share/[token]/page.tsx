@@ -337,6 +337,7 @@ export default function SharePage() {
         onClose={handleClosePreview}
         mediaItems={lightbox.mediaItems}
         initialIndex={selectedMediaIndex}
+        shareLinkId={shareLink.id}
       />
     </div>
   )

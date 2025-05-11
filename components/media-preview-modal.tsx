@@ -15,6 +15,7 @@ interface MediaPreviewModalProps {
   mediaItems: MediaItem[]
   initialIndex: number
   onRequestMore?: () => Promise<void>
+  shareLinkId: string
 }
 
 // Helper: file extension mapping for media type
@@ -33,7 +34,7 @@ function getMediaTypeFromUrl(url?: string): "image" | "video" | undefined {
   return undefined;
 }
 
-export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initialIndex, onRequestMore }: MediaPreviewModalProps) {
+export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initialIndex, onRequestMore, shareLinkId }: MediaPreviewModalProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -104,6 +105,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
       recordAnalyticsEvent({
         event: 'video_play',
         media_item_id: itemId,
+        share_link_id: shareLinkId,
       });
       setHasSentPlay(true);
       setHasSentEnd(false);
@@ -111,14 +113,14 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
     if (!isPlaying) {
       setHasSentPlay(false);
     }
-  }, [isPlaying, isOpen, currentMediaType, hasSentPlay, currentItem ? currentItem.id : null]);
+  }, [isPlaying, isOpen, currentMediaType, hasSentPlay, currentItem ? currentItem.id : null, shareLinkId]);
 
   // Reset play/end sent flags when video or modal changes
   useEffect(() => {
     setHasSentPlay(false);
     setHasSentEnd(false);
     lastProgressRef.current = 0;
-  }, [isOpen, currentItem ? currentItem.id : null]);
+  }, [isOpen, currentItem ? currentItem.id : null, shareLinkId]);
 
   // Send video_end event when video finishes
   useEffect(() => {
@@ -136,10 +138,11 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
         event: 'video_end',
         media_item_id: itemId,
         duration_ms: Math.floor(currentTime * 1000),
+        share_link_id: shareLinkId,
       });
       setHasSentEnd(true);
     }
-  }, [isPlaying, isOpen, currentMediaType, hasSentEnd, currentTime, duration, currentItem ? currentItem.id : null]);
+  }, [isPlaying, isOpen, currentMediaType, hasSentEnd, currentTime, duration, currentItem ? currentItem.id : null, shareLinkId]);
 
   // Send video_watch_progress every 1s while playing
   useEffect(() => {
@@ -151,13 +154,14 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
             event: 'video_watch_progress',
             media_item_id: itemId,
             duration_ms: Math.floor(currentTime * 1000),
+            share_link_id: shareLinkId,
           });
           lastProgressRef.current = currentTime;
         }
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [isOpen, currentMediaType, isPlaying, currentTime, currentItem ? currentItem.id : null]);
+  }, [isOpen, currentMediaType, isPlaying, currentTime, currentItem ? currentItem.id : null, shareLinkId]);
 
   // Keyboard navigation for next/prev
   useEffect(() => {
@@ -179,11 +183,12 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
       recordAnalyticsEvent({
         event: 'media_click',
         media_item_id: currentItem.id,
+        share_link_id: shareLinkId,
       });
     }
     // Only fire when modal is open and item changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, currentIndex]);
+  }, [isOpen, currentIndex, shareLinkId]);
 
   if (!isOpen || !currentItem) return null
 
@@ -256,6 +261,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                           event: 'video_end',
                           media_item_id: itemId,
                           duration_ms: Math.floor(currentTime * 1000),
+                          share_link_id: shareLinkId,
                         });
                         setHasSentEnd(true);
                       }
