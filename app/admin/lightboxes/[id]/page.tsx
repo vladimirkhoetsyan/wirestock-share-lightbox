@@ -189,6 +189,13 @@ async function validateShareLink(data: { token: string; password?: string }) {
   return res.json()
 }
 
+// Helper: fetch analytics for a media item
+async function fetchMediaItemAnalytics(mediaItemId: string) {
+  const res = await fetch(`/api/admin/analytics/media-item/${mediaItemId}`);
+  if (!res.ok) throw new Error("Failed to fetch media item analytics");
+  return res.json();
+}
+
 function combineRefs(...refs: any[]) {
   return (node: any) => {
     refs.forEach(ref => {
@@ -225,6 +232,9 @@ export default function LightboxEditPage() {
   // Add a new state for saving order
   const [isSavingOrder, setIsSavingOrder] = useState(false)
   const [isCreateShareDialogOpen, setIsCreateShareDialogOpen] = useState(false)
+  // Media item analytics state
+  const [mediaAnalytics, setMediaAnalytics] = useState<Record<string, any>>({});
+  const [mediaAnalyticsLoading, setMediaAnalyticsLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -292,6 +302,26 @@ export default function LightboxEditPage() {
       setIsLoadingMore(false)
     }, 800)
   }
+
+  // Fetch analytics for displayed media items
+  useEffect(() => {
+    const fetchAll = async () => {
+      const idsToFetch = displayedMediaItems.filter(item => !mediaAnalytics[item.id] && !mediaAnalyticsLoading[item.id]);
+      if (idsToFetch.length === 0) return;
+      const newLoading: Record<string, boolean> = {};
+      idsToFetch.forEach(item => { newLoading[item.id] = true; });
+      setMediaAnalyticsLoading(prev => ({ ...prev, ...newLoading }));
+      await Promise.all(idsToFetch.map(async (item) => {
+        try {
+          const data = await fetchMediaItemAnalytics(item.id);
+          setMediaAnalytics(prev => ({ ...prev, [item.id]: data }));
+        } catch {}
+        setMediaAnalyticsLoading(prev => ({ ...prev, [item.id]: false }));
+      }));
+    };
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedMediaItems]);
 
   if (!lightbox && !isLoading) {
     return (
@@ -809,6 +839,32 @@ export default function LightboxEditPage() {
                                             )}
                                             {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl)}
                                           </Badge>
+                                          {/* Inline analytics badges */}
+                                          <div className="flex gap-2 mt-2 flex-wrap">
+                                            {mediaAnalyticsLoading[item.id] ? (
+                                              <span className="text-xs text-gray-400 animate-pulse">Loading analytics...</span>
+                                            ) : mediaAnalytics[item.id] ? (
+                                              <>
+                                                <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-blue-300">
+                                                  <Eye className="h-3 w-3" /> {mediaAnalytics[item.id].views ?? 0}
+                                                </span>
+                                                {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "video" && (
+                                                  <>
+                                                    <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-purple-300">
+                                                      <Video className="h-3 w-3" /> {mediaAnalytics[item.id].playCount ?? 0}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-yellow-300">
+                                                      <Clock className="h-3 w-3" />{mediaAnalytics[item.id].avgWatchDuration ? `${Math.round(mediaAnalytics[item.id].avgWatchDuration / 1000)}s` : "0s"}
+                                                    </span>
+                                                  </>
+                                                )}
+                                                <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-green-300">
+                                                  <MousePointer className="h-3 w-3" />
+                                                  {(mediaAnalytics[item.id].views ?? 0) + (mediaAnalytics[item.id].playCount ?? 0)}
+                                                </span>
+                                              </>
+                                            ) : null}
+                                          </div>
                                         </div>
                                         <div className="flex gap-1">
                                           <Button

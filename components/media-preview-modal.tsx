@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import type { MediaItem } from "@/lib/mock-data"
@@ -40,6 +40,9 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasSentPlay, setHasSentPlay] = useState(false)
+  const [hasSentEnd, setHasSentEnd] = useState(false)
+  const lastProgressRef = useRef(0)
 
   const currentItem = Array.isArray(mediaItems) && mediaItems.length > 0 && currentIndex >= 0 && currentIndex < mediaItems.length ? mediaItems[currentIndex] : undefined
   const currentMediaType = getMediaTypeFromUrl(currentItem?.signedUrl || currentItem?.url || currentItem?.thumbnailUrl);
@@ -94,68 +97,67 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`
   }
 
-  // Mock video player progress
+  // Send video_play event only once per play
   useEffect(() => {
-    let interval: NodeJS.Timeout
-
-    if (currentItem?.type === "video" && isPlaying) {
-      // Mock a 30 second video
-      setDuration(30)
-
-      interval = setInterval(() => {
-        setCurrentTime((prev) => {
-          if (prev >= 30) {
-            setIsPlaying(false)
-            return 0
-          }
-          return prev + 0.1
-        })
-      }, 100)
-    } else {
-      setCurrentTime(0)
+    const itemId = currentItem ? currentItem.id : null;
+    if (isOpen && currentMediaType === 'video' && itemId && isPlaying && !hasSentPlay) {
+      recordAnalyticsEvent({
+        event: 'video_play',
+        media_item_id: itemId,
+      });
+      setHasSentPlay(true);
+      setHasSentEnd(false);
     }
-
-    return () => {
-      if (interval) clearInterval(interval)
+    if (!isPlaying) {
+      setHasSentPlay(false);
     }
-  }, [currentItem, isPlaying])
+  }, [isPlaying, isOpen, currentMediaType, hasSentPlay, currentItem ? currentItem.id : null]);
 
+  // Reset play/end sent flags when video or modal changes
   useEffect(() => {
-    let progressInterval: NodeJS.Timeout | null = null;
-    let lastReported = 0;
-    if (isOpen && currentMediaType === 'video' && currentItem) {
-      // Video play event
-      if (isPlaying && currentTime === 0) {
-        recordAnalyticsEvent({
-          event: 'video_play',
-          media_item_id: currentItem.id,
-        });
-      }
-      // Video end event
-      if (!isPlaying && currentTime > 0 && Math.abs(currentTime - duration) < 1) {
-        recordAnalyticsEvent({
-          event: 'video_end',
-          media_item_id: currentItem.id,
-        });
-      }
-      // Periodic watch progress
-      if (isPlaying) {
-        progressInterval = setInterval(() => {
-          if (currentTime - lastReported >= 5) {
-            recordAnalyticsEvent({
-              event: 'video_watch_progress',
-              media_item_id: currentItem.id,
-              duration_ms: Math.floor(currentTime * 1000),
-            });
-            lastReported = currentTime;
-          }
-        }, 1000);
-      }
+    setHasSentPlay(false);
+    setHasSentEnd(false);
+    lastProgressRef.current = 0;
+  }, [isOpen, currentItem ? currentItem.id : null]);
+
+  // Send video_end event when video finishes
+  useEffect(() => {
+    const itemId = currentItem ? currentItem.id : null;
+    if (
+      isOpen &&
+      currentMediaType === 'video' &&
+      itemId &&
+      !isPlaying &&
+      currentTime > 0 &&
+      Math.abs(currentTime - duration) < 1 &&
+      !hasSentEnd
+    ) {
+      recordAnalyticsEvent({
+        event: 'video_end',
+        media_item_id: itemId,
+        duration_ms: Math.floor(currentTime * 1000),
+      });
+      setHasSentEnd(true);
     }
-    return () => {
-      if (progressInterval) clearInterval(progressInterval);
-    };
-  }, [isPlaying, currentTime, duration, isOpen, currentMediaType, currentItem]);
+  }, [isPlaying, isOpen, currentMediaType, hasSentEnd, currentTime, duration, currentItem ? currentItem.id : null]);
+
+  // Send video_watch_progress every 1s while playing
+  useEffect(() => {
+    const itemId = currentItem ? currentItem.id : null;
+    if (isOpen && currentMediaType === 'video' && itemId && isPlaying) {
+      const interval = setInterval(() => {
+        if (currentTime - lastProgressRef.current >= 1) {
+          recordAnalyticsEvent({
+            event: 'video_watch_progress',
+            media_item_id: itemId,
+            duration_ms: Math.floor(currentTime * 1000),
+          });
+          lastProgressRef.current = currentTime;
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen, currentMediaType, isPlaying, currentTime, currentItem ? currentItem.id : null]);
 
   // Keyboard navigation for next/prev
   useEffect(() => {
@@ -233,7 +235,19 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                     height="100%"
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
-                    onEnded={() => setIsPlaying(false)}
+                    onEnded={() => {
+                      setIsPlaying(false);
+                      // Ensure video_end is sent on end (only if not already sent)
+                      const itemId = currentItem ? currentItem.id : null;
+                      if (itemId && currentTime > 0 && !hasSentEnd) {
+                        recordAnalyticsEvent({
+                          event: 'video_end',
+                          media_item_id: itemId,
+                          duration_ms: Math.floor(currentTime * 1000),
+                        });
+                        setHasSentEnd(true);
+                      }
+                    }}
                     onProgress={({ playedSeconds }) => setCurrentTime(playedSeconds)}
                     onDuration={setDuration}
                     onReady={() => setIsLoading(false)}
