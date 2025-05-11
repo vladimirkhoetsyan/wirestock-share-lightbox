@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,6 +41,8 @@ export default function ImportMediaModal({ isOpen, onClose, onImport, lightboxId
   const [preview, setPreview] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [columnMapping, setColumnMapping] = useState<{ [key: string]: string }>({})
+  const [processingProgress, setProcessingProgress] = useState<{ total: number; processed: number; errors: number } | null>(null)
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -90,11 +92,30 @@ export default function ImportMediaModal({ isOpen, onClose, onImport, lightboxId
     setIsUploading(true)
     setUploadProgress(0)
     setError(null)
+    setProcessingProgress(null)
+    const progressId = crypto.randomUUID()
     try {
       const token = localStorage.getItem("token")
       const formData = new FormData()
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(columnMapping))
+      formData.append("progressId", progressId)
+
+      // Start polling for progress
+      pollingRef.current = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/lightboxes/${lightboxId}/import-csv?progressId=${progressId}`)
+          if (res.ok) {
+            const prog = await res.json()
+            setProcessingProgress(prog)
+            if (prog.total > 0 && prog.processed >= prog.total) {
+              clearInterval(pollingRef.current!)
+              pollingRef.current = null
+            }
+          }
+        } catch {}
+      }, 1000)
+
       const res = await fetch(`/api/lightboxes/${lightboxId}/import-csv`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -103,17 +124,26 @@ export default function ImportMediaModal({ isOpen, onClose, onImport, lightboxId
       if (!res.ok) throw new Error("Failed to import media from CSV")
       const data = await res.json()
       onImport(data)
-          setFile(null)
-          setIsUploading(false)
-          setUploadProgress(0)
-          setPreview([])
+      setFile(null)
+      setIsUploading(false)
+      setUploadProgress(0)
+      setPreview([])
       setHeaders([])
       setColumnMapping({})
-          onClose()
+      setProcessingProgress(null)
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+      onClose()
     } catch (err: any) {
       setError(err.message || "Failed to import media from CSV")
-          setIsUploading(false)
-        }
+      setIsUploading(false)
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
   }
 
   return (
@@ -202,12 +232,19 @@ export default function ImportMediaModal({ isOpen, onClose, onImport, lightboxId
           )}
 
           {isUploading && (
-            <div className="flex items-center gap-2 text-blue-400 py-2">
-              <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div className="flex flex-col items-center gap-2 text-blue-400 py-2 w-full">
+              <svg className="animate-spin h-5 w-5 mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Uploading and processing CSV...
+              {processingProgress && processingProgress.total > 0 ? (
+                <>
+                  <Progress value={Math.round((processingProgress.processed / processingProgress.total) * 100)} className="w-full max-w-xs" />
+                  <span className="text-xs mt-1">Processing {processingProgress.processed} of {processingProgress.total} rows{processingProgress.errors > 0 ? `, ${processingProgress.errors} errors` : ''}...</span>
+                </>
+              ) : (
+                <span>Uploading and processing CSV...</span>
+              )}
             </div>
           )}
         </div>
