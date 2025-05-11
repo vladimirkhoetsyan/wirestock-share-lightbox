@@ -4,7 +4,8 @@ import { prisma } from '../../../../lib/prisma';
 import { verifyJwt } from '../../../../lib/auth-server';
 
 // GET /api/lightboxes/[id]
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
+  const { params } = context;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -47,7 +48,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PUT /api/lightboxes/[id]
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: { id: string } }) {
+  const { params } = context;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -78,7 +80,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/lightboxes/[id]
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+  const { params } = context;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 
 export async function GET(req: NextRequest, context: { params: { id: string } } | Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+  const resolvedContext = context instanceof Promise ? await context : context;
+  const { params } = resolvedContext;
   const lightboxId = params.id;
   // Find all share links for this lightbox
   const shareLinks = await prisma.share_links.findMany({

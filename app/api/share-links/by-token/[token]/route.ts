@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 
 // GET /api/share-links/by-token/[token]
-export async function GET(req: NextRequest, contextPromise: Promise<{ params: { token: string } }>) {
-  const { params } = await contextPromise;
+export async function GET(req: NextRequest, paramsContext: { params: { token: string } }) {
+  const { params } = paramsContext;
   const { token } = params;
   const shareLink = await prisma.share_links.findUnique({
     where: { token },
@@ -27,9 +27,9 @@ export async function GET(req: NextRequest, contextPromise: Promise<{ params: { 
     isPasswordProtected: !!shareLink.password_hash,
     createdAt: shareLink.created_at,
     analytics: {
-      totalViews: shareLink.analytics?.totalViews ?? 0,
-      mediaInteractions: shareLink.analytics?.mediaInteractions ?? 0,
-      timeSpentPerMedia: shareLink.analytics?.timeSpentPerMedia ?? 0,
+      totalViews: 0,
+      mediaInteractions: 0,
+      timeSpentPerMedia: 0,
     },
   });
 } 

@@ -4,7 +4,8 @@ import { verifyJwt, hashPassword } from 'lib/auth-server';
 
 // GET /api/lightboxes/[id]/share-links
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { params } = context;
+  const id = params.id;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,7 +37,8 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 
 // POST /api/lightboxes/[id]/share-links
 export async function POST(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { params } = context;
+  const id = params.id;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

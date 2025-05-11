@@ -5,7 +5,8 @@ import { getSignedS3Url } from 'lib/s3';
 
 // GET /api/lightboxes/[id]/media
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { params } = context;
+  const { id } = params;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -59,8 +60,8 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       media_type: item.media_type,
       duration_seconds: item.duration_seconds,
       dimensions: item.dimensions,
-      order: item.order,
-      createdAt: item.created_at,
+      order: item.order === null ? undefined : item.order,
+      createdAt: item.created_at === null ? undefined : item.created_at,
     };
   }));
   return NextResponse.json(result);
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 
 // POST /api/lightboxes/[id]/media
 export async function POST(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     media_type: item.media_type,
     duration_seconds: item.duration_seconds,
     dimensions: item.dimensions,
-    order: item.order,
-    createdAt: item.created_at,
+    order: item.order === null ? undefined : item.order,
+    createdAt: item.created_at === null ? undefined : item.created_at,
   });
 } 

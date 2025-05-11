@@ -9,7 +9,8 @@ const SESSION_TIMEOUT_MINUTES = 30;
 const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000;
 
 export async function GET(req: NextRequest, context: { params: { id: string } } | Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+  const resolvedContext = context instanceof Promise ? await context : context;
+  const { params } = resolvedContext;
   const lightboxId = params.id;
   // Find the lightbox name
   const lightbox = await prisma.lightboxes.findUnique({ where: { id: lightboxId }, select: { name: true } });

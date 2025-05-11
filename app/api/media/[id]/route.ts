@@ -5,7 +5,8 @@ import { getSignedS3Url } from 'lib/s3';
 
 // GET /api/media/[id]
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { params } = context;
+  const id = params.id;
   const item = await prisma.media_items.findUnique({ where: { id } });
   if (!item) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 
 // PUT /api/media/[id]
 export async function PUT(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -64,7 +65,7 @@ export async function PUT(req: NextRequest, context: { params: { id: string } })
 
 // DELETE /api/media/[id]
 export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -10,7 +10,8 @@ const SESSION_TIMEOUT_MINUTES = 30;
 const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000;
 
 export async function GET(req: NextRequest, context: { params: { id: string } } | Promise<{ params: { id: string } }>) {
-  const { params } = await context;
+  const resolvedContext = context instanceof Promise ? await context : context;
+  const { params } = resolvedContext;
   const shareLinkId = params.id;
   // Find the share link
   const shareLink = await prisma.share_links.findUnique({ where: { id: shareLinkId }, select: { id: true, lightbox_id: true, name: true } });

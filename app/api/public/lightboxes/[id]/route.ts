@@ -5,7 +5,8 @@ import { verifyJwt } from 'lib/auth-server';
 
 // GET /api/public/lightboxes/[id]?shareToken=...
 // Note: For password-protected share links, the frontend must enforce password validation before calling this endpoint.
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, paramsContext: { params: { id: string } }) {
+  const { params } = paramsContext;
   const { searchParams } = new URL(req.url);
   const shareToken = searchParams.get('shareToken');
   if (!shareToken) {
