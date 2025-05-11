@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { type Lightbox, mockLightboxes } from "@/lib/mock-data"
-import { Edit, Trash2, Plus, ImageIcon, Video, Share2, BarChart2, Users, Timer, Eye } from "lucide-react"
+import { Edit, Trash2, Plus, ImageIcon, Video, Share2, BarChart2, Users, Timer, Eye, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 
@@ -50,6 +50,8 @@ export default function DashboardPage() {
   const { toast } = useToast()
   const [analytics, setAnalytics] = useState<Record<string, any>>({})
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [summary, setSummary] = useState<any>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -79,6 +81,14 @@ export default function DashboardPage() {
     }
     if (lightboxes.length > 0) fetchAllAnalytics()
   }, [lightboxes])
+
+  useEffect(() => {
+    setSummaryLoading(true);
+    fetch("/api/admin/analytics/summary")
+      .then((res) => res.json())
+      .then(setSummary)
+      .finally(() => setSummaryLoading(false));
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this lightbox? This action cannot be undone.")) {
@@ -112,6 +122,52 @@ export default function DashboardPage() {
         <ModernHeader />
         <main className="pt-20 pb-16 min-h-screen">
           <div className="container mx-auto px-4">
+            {/* --- OVERALL ANALYTICS SUMMARY --- */}
+            <div className="mb-12">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                <h1 className="text-4xl font-bold mb-2 text-white">Dashboard Analytics</h1>
+                <p className="text-gray-300 mb-8">App-wide summary of engagement and content</p>
+              </motion.div>
+              <div className="mb-10">
+                {summaryLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="animate-spin h-8 w-8 text-white" />
+                  </div>
+                ) : summary ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <Card className="glass-card p-6 flex flex-col items-center">
+                      <span className="text-2xl font-bold text-blue-400">{summary.totalLightboxes}</span>
+                      <span className="text-gray-300 mt-2">Total Lightboxes</span>
+                    </Card>
+                    <Card className="glass-card p-6 flex flex-col items-center">
+                      <span className="text-2xl font-bold text-purple-400">{summary.totalMediaItems}</span>
+                      <span className="text-gray-300 mt-2">Total Media Items</span>
+                    </Card>
+                    <Card className="glass-card p-6 flex flex-col items-center">
+                      <span className="text-2xl font-bold text-cyan-400">{summary.totalShareLinks}</span>
+                      <span className="text-gray-300 mt-2">Total Share Links</span>
+                    </Card>
+                    <Card className="glass-card p-6 flex flex-col items-center">
+                      <span className="text-2xl font-bold text-yellow-400">{summary.totalViews}</span>
+                      <span className="text-gray-300 mt-2">Total Views</span>
+                    </Card>
+                    <Card className="glass-card p-6 flex flex-col items-center">
+                      <span className="text-2xl font-bold text-green-400">{summary.uniqueSessions}</span>
+                      <span className="text-gray-300 mt-2">Unique Sessions</span>
+                    </Card>
+                    <Card className="glass-card p-6 flex flex-col items-center">
+                      <span className="text-2xl font-bold text-pink-400">{summary.uniqueDevices}</span>
+                      <span className="text-gray-300 mt-2">Unique Devices</span>
+                    </Card>
+                    <Card className="glass-card p-6 flex flex-col items-center">
+                      <span className="text-2xl font-bold text-orange-400">{formatDuration(summary.avgSessionDuration)}</span>
+                      <span className="text-gray-300 mt-2">Avg. Session Duration</span>
+                    </Card>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
             <div className="mb-12">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <h1 className="text-4xl font-bold mb-2 text-white">Your Lightbox Collections</h1>
