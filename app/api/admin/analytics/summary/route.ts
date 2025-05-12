@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
-import { getMediaUrlsFromS3Uri } from 'lib/media-urls';
+import { getMediaUrlsFromS3Uri, getMediaTypeFromKey } from 'lib/media-urls';
 import { getSignedS3Url } from 'lib/s3';
 
 // Configurable inactivity timeout (in milliseconds)
@@ -72,10 +72,12 @@ export async function GET(req: NextRequest) {
       try {
         urls = await getMediaUrlsFromS3Uri(item.s3_uri);
       } catch {}
+      // Infer type if missing
+      const media_type = item.media_type || getMediaTypeFromKey(item.s3_uri.split('s3://')[1]?.split('/').slice(1).join('/') || item.s3_uri);
       mostInteractedMediaItem = {
         id: item.id,
         title: item.s3_uri,
-        media_type: item.media_type,
+        media_type,
         s3_uri: item.s3_uri,
         originalUrl: urls?.original || '',
         thumbnailUrl: urls?.thumbnail || '',

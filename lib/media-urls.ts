@@ -16,7 +16,7 @@ const VIDEO_EXTENSIONS = [
   'mp4', 'mov', 'webm', 'm4v', 'avi', 'mkv', 'ogv', '3gp', '3g2', 'hls', 'm3u8'
 ];
 
-function getMediaTypeFromKey(key: string): 'image' | 'video' | undefined {
+export function getMediaTypeFromKey(key: string): 'image' | 'video' | undefined {
   const extMatch = key.split('?')[0].split('.').pop();
   if (!extMatch) return undefined;
   const ext = extMatch.toLowerCase();
@@ -63,7 +63,19 @@ type MediaUrlResolver = (bucket: string, key: string, type: 'image' | 'video') =
 
 const fallbackResolver: MediaUrlResolver = async (bucket, key, type) => {
   const original = await getSignedS3Url(`s3://${bucket}/${key}`);
-  console.log('[media-urls] Fallback resolver:', { bucket, key, type, original });
+  if (type === 'video') {
+    // Try to get a thumbnail image for the video
+    let thumbnail = original;
+    try {
+      thumbnail = await getSignedS3Url(`s3://${bucket}/${key}.0000000.jpg`);
+    } catch {}
+    return {
+      original,
+      thumbnail,
+      preview: original,
+    };
+  }
+  // Default for images and unknown types
   return {
     original,
     thumbnail: original,

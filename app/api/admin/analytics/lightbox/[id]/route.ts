@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { getSignedS3Url } from 'lib/s3';
+import { getMediaUrlsFromS3Uri, getMediaTypeFromKey } from 'lib/media-urls';
 
 // TODO: Add real admin authentication
 
@@ -85,16 +86,24 @@ export async function GET(req: NextRequest, context: { params: { id: string } } 
     mostInteractedItems = await Promise.all(topMediaIds.map(async (id) => {
       const item = mediaItems.find((m) => m.id === id);
       if (item) {
+        let urls = null;
+        try {
+          urls = await getMediaUrlsFromS3Uri(item.s3_uri);
+        } catch {}
         let signedUrl = null;
         try {
           signedUrl = await getSignedS3Url(item.s3_uri);
         } catch {}
+        // Infer type if missing
+        const media_type = item.media_type || getMediaTypeFromKey(item.s3_uri.split('s3://')[1]?.split('/').slice(1).join('/') || item.s3_uri);
         return {
           id: item.id,
           title: item.s3_uri,
-          media_type: item.media_type,
+          media_type,
           s3_uri: item.s3_uri,
-          signedUrl,
+          thumbnailUrl: urls?.thumbnail || signedUrl || '',
+          originalUrl: urls?.original || signedUrl || '',
+          previewUrl: urls?.preview || '',
           count: interactionCounts[id],
         };
       } else {

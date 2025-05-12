@@ -163,45 +163,40 @@ export default function LightboxAnalyticsPage() {
                 <h2 className="text-xl font-bold text-white mb-4">Top Interacted Media Items</h2>
                 <ul className="text-white space-y-2">
                   {analytics.mostInteractedItems && analytics.mostInteractedItems.length > 0 ? (
-                    analytics.mostInteractedItems.map((item: any, idx: number) => (
-                      <li key={item.id} className="flex items-center gap-3">
-                        <span className="font-bold text-lg text-blue-400">#{idx + 1}</span>
-                        {item.media_type === "image" && item.signedUrl ? (
-                          <img
-                            src={item.signedUrl}
-                            alt={item.title}
-                            className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition"
-                            onClick={() => {
-                              setPreviewIndex(idx);
-                              setPreviewOpen(true);
-                            }}
-                          />
-                        ) : item.media_type === "video" ? (
-                          <div
-                            className="w-16 h-16 bg-black flex items-center justify-center rounded cursor-pointer hover:opacity-80 transition"
-                            onClick={() => {
-                              setPreviewIndex(idx);
-                              setPreviewOpen(true);
-                            }}
-                          >
-                            <Video className="h-8 w-8 text-white opacity-60" />
-                          </div>
-                        ) : (
-                          <div
-                            className="w-16 h-16 bg-gray-800 flex items-center justify-center rounded cursor-pointer hover:opacity-80 transition"
-                            onClick={() => {
-                              setPreviewIndex(idx);
-                              setPreviewOpen(true);
-                            }}
-                          >
-                            <ImageIcon className="h-8 w-8 text-white opacity-60" />
-                          </div>
-                        )}
-                        <span className="text-white truncate max-w-xs">{item.title}</span>
-                        <span className="ml-2 text-xs text-gray-400">[{item.media_type}]</span>
-                        <span className="ml-auto text-gray-400">{item.count} interactions</span>
-                      </li>
-                    ))
+                    analytics.mostInteractedItems.map((item: any, idx: number) => {
+                      const type = item.media_type || item.type;
+                      const isImage = type === "image";
+                      const isVideo = type === "video";
+                      return (
+                        <li key={item.id} className="flex items-center gap-3">
+                          <span className="font-bold text-lg text-blue-400">#{idx + 1}</span>
+                          {(isImage || isVideo) ? (
+                            <img
+                              src={item.thumbnailUrl || "/placeholder.svg"}
+                              alt={item.title}
+                              className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition"
+                              onClick={() => {
+                                setPreviewIndex(idx);
+                                setPreviewOpen(true);
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="w-16 h-16 bg-gray-800 flex items-center justify-center rounded cursor-pointer hover:opacity-80 transition"
+                              onClick={() => {
+                                setPreviewIndex(idx);
+                                setPreviewOpen(true);
+                              }}
+                            >
+                              <ImageIcon className="h-8 w-8 text-white opacity-60" />
+                            </div>
+                          )}
+                          <span className="text-white truncate max-w-xs">{item.title}</span>
+                          <span className="ml-2 text-xs text-gray-400">[{type}]</span>
+                          <span className="ml-auto text-gray-400">{item.count} interactions</span>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li className="text-gray-400">No interactions yet.</li>
                   )}
