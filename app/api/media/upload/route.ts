@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { verifyJwt } from 'lib/auth-server';
-import { getSignedS3Url } from 'lib/s3';
+import { getMediaUrlsFromS3Uri } from 'lib/media-urls';
 
 // POST /api/media/upload
 export async function POST(req: NextRequest) {
@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
       order: newOrder,
     },
   });
-  let signedUrl = null;
+  let urls = null;
   try {
-    signedUrl = await getSignedS3Url(item.s3_uri);
+    urls = await getMediaUrlsFromS3Uri(item.s3_uri);
   } catch (e) {}
   return NextResponse.json({
     id: item.id,
@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
     order: item.order,
     createdAt: item.created_at,
     lightbox_id: item.lightbox_id,
-    signedUrl,
+    originalUrl: urls?.original || '',
+    thumbnailUrl: urls?.thumbnail || '',
+    previewUrl: urls?.preview || '',
   });
 } 

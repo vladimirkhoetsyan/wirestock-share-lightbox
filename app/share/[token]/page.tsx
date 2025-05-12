@@ -302,7 +302,7 @@ export default function SharePage() {
       <main className="container mx-auto px-4 py-8">
         <div className="media-grid">
           {lightbox.mediaItems.map((item: any, index: any) => {
-            const mediaType = getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl);
+            const mediaType = getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl);
             return (
               <motion.div
                 key={item.id}
@@ -312,7 +312,7 @@ export default function SharePage() {
                 className="media-item"
                 onClick={() => handleMediaClick(index)}
               >
-                <img src={mediaType === "video" ? (item.thumbnailUrl || "/video-placeholder.svg") : (item.signedUrl || item.thumbnailUrl || "/placeholder.svg")} alt={item.title} />
+                <img src={item.thumbnailUrl || '/placeholder.svg'} alt={item.title} />
                 {mediaType === "video" && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">

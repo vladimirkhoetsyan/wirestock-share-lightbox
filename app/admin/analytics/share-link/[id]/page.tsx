@@ -134,7 +134,7 @@ export default function ShareLinkAnalyticsPage() {
                         <span className="font-bold text-lg text-blue-400">#{idx + 1}</span>
                         {item.media_type === "image" && item.signedUrl ? (
                           <img
-                            src={item.signedUrl}
+                            src={item.thumbnailUrl || '/placeholder.svg'}
                             alt={item.title}
                             className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition"
                             onClick={() => {

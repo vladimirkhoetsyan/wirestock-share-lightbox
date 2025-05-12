@@ -9,6 +9,11 @@ import { motion, AnimatePresence } from "framer-motion"
 import ReactPlayer from "react-player"
 import { recordAnalyticsEvent } from '@/lib/analytics'
 
+interface MediaItemWithUrls extends MediaItem {
+  previewUrl?: string;
+  originalUrl?: string;
+}
+
 interface MediaPreviewModalProps {
   isOpen: boolean
   onClose: () => void
@@ -45,8 +50,14 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
   const [hasSentEnd, setHasSentEnd] = useState(false)
   const lastProgressRef = useRef(0)
 
-  const currentItem = Array.isArray(mediaItems) && mediaItems.length > 0 && currentIndex >= 0 && currentIndex < mediaItems.length ? mediaItems[currentIndex] : undefined
-  const currentMediaType = getMediaTypeFromUrl(currentItem?.signedUrl || currentItem?.url || currentItem?.thumbnailUrl);
+  const currentItem = Array.isArray(mediaItems) && mediaItems.length > 0 && currentIndex >= 0 && currentIndex < mediaItems.length ? mediaItems[currentIndex] as MediaItemWithUrls : undefined
+  const currentMediaType = currentItem?.type || getMediaTypeFromUrl(currentItem?.previewUrl || currentItem?.url || currentItem?.thumbnailUrl);
+
+  // Fallback logic for image preview
+  const [imageSrc, setImageSrc] = useState<string | undefined>(currentItem?.previewUrl || currentItem?.originalUrl || "/placeholder.svg");
+  useEffect(() => {
+    setImageSrc(currentItem?.previewUrl || currentItem?.originalUrl || "/placeholder.svg");
+  }, [currentItem]);
 
   useEffect(() => {
     setCurrentIndex(initialIndex)
@@ -198,7 +209,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
         className="max-w-[98vw] w-full max-h-screen p-0 bg-[#18181B] text-white overflow-auto border-none rounded-xl shadow-2xl z-[10050] flex items-center justify-center"
         style={{ minHeight: 400 }}
       >
-        <DialogTitle className="sr-only">{currentItem.title || "Media Preview"}</DialogTitle>
+        <DialogTitle className="sr-only">{currentItem?.title || "Media Preview"}</DialogTitle>
         <div className="relative flex flex-col w-full max-h-screen min-h-[60vh]">
           {/* Close button */}
           <Button
@@ -230,9 +241,16 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  src={currentItem.signedUrl || currentItem.thumbnailUrl || "/placeholder.svg"}
-                  alt={currentItem.title}
+                  src={imageSrc}
+                  alt={currentItem?.title}
                   className="max-h-screen max-w-full w-auto h-auto object-contain"
+                  onError={() => {
+                    if (imageSrc !== currentItem?.originalUrl && currentItem?.originalUrl) {
+                      setImageSrc(currentItem.originalUrl);
+                    } else if (imageSrc !== "/placeholder.svg") {
+                      setImageSrc("/placeholder.svg");
+                    }
+                  }}
                 />
               ) : currentMediaType === "video" ? (
                 <motion.div
@@ -244,7 +262,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   className="relative w-full h-full flex items-center justify-center"
                 >
                   <ReactPlayer
-                    url={currentItem.signedUrl || currentItem.url}
+                    url={currentItem?.previewUrl || currentItem?.originalUrl || currentItem?.url}
                     playing={isPlaying}
                     muted={isMuted}
                     controls
@@ -272,7 +290,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                     config={{
                       file: {
                         attributes: {
-                          poster: currentItem.thumbnailUrl || undefined,
+                          poster: currentItem?.thumbnailUrl || "/placeholder.svg",
                         },
                       },
                     }}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parse } from 'csv-parse/sync';
 import { getSignedS3Url } from '@/lib/s3';
+import { getMediaUrlsFromS3Uri } from '@/lib/media-urls';
 
 const importProgress: Record<string, { total: number; processed: number; errors: number }> = {};
 
@@ -61,11 +62,16 @@ export async function POST(req: NextRequest, contextPromise: Promise<{ params: {
           // Add more fields as needed
         },
       });
-      let signedUrl = null;
+      let urls = null;
       try {
-        signedUrl = await getSignedS3Url(s3_uri);
+        urls = await getMediaUrlsFromS3Uri(s3_uri);
       } catch {}
-      importedItems.push({ ...created, signedUrl });
+      importedItems.push({
+        ...created,
+        originalUrl: urls?.original || '',
+        thumbnailUrl: urls?.thumbnail || '',
+        previewUrl: urls?.preview || '',
+      });
     } catch (e) {
       errors.push(`Failed to import record: ${JSON.stringify(record)}`);
       if (progressId) importProgress[progressId].errors++;

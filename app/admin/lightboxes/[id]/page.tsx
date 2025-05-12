@@ -49,6 +49,7 @@ import Link from "next/link"
 import { ImageIcon } from "lucide-react"
 import ImportMediaModal from "@/components/import-media-modal"
 import MediaPreviewModal from "@/components/media-preview-modal"
+import { getMediaUrlsFromS3Uri, MediaUrls } from '@/lib/media-urls'
 
 // Number of items to load per page
 const ITEMS_PER_PAGE = 10
@@ -265,6 +266,7 @@ export default function LightboxEditPage() {
   // Share link analytics state
   const [shareLinkAnalytics, setShareLinkAnalytics] = useState<Record<string, any>>({});
   const [shareLinkAnalyticsLoading, setShareLinkAnalyticsLoading] = useState<Record<string, boolean>>({});
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -277,7 +279,7 @@ export default function LightboxEditPage() {
         setKeywords(data.keywords.join(", "))
         fetchMediaItems(id, token)
           .then((media) => {
-            setDisplayedMediaItems(media)
+            setDisplayedMediaItems(media.map((item: any) => ({ ...item, type: item.media_type })));
             setHasMore(media.length > ITEMS_PER_PAGE)
           })
           .catch(() => toast({ title: "Error", description: "Failed to load media items", variant: "destructive" }))
@@ -309,28 +311,36 @@ export default function LightboxEditPage() {
     [isLoadingMore, hasMore],
   )
 
-  const loadMoreItems = () => {
-    if (!lightbox || isLoadingMore || !hasMore) return
+  const loadMoreItems = async () => {
+    if (!lightbox || isLoadingMore || !hasMore) return;
 
-    setIsLoadingMore(true)
+    setIsLoadingMore(true);
+    const token = localStorage.getItem("token");
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
+    if (!token || !id) return;
 
-    // Simulate API call delay
-    setTimeout(() => {
-      const nextPage = currentPage + 1
-      const startIndex = (nextPage - 1) * ITEMS_PER_PAGE
-      const endIndex = startIndex + ITEMS_PER_PAGE
-      const newItems = lightbox.mediaItems.slice(startIndex, endIndex)
-
+    // Use the last loaded item's id as the cursor
+    const lastItem = displayedMediaItems[displayedMediaItems.length - 1];
+    let url = `/api/lightboxes/${id}/media?limit=${ITEMS_PER_PAGE}`;
+    if (lastItem) {
+      url += `&cursor=${lastItem.id}`;
+    }
+    try {
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("Failed to fetch more media items");
+      const newItems = await res.json();
       if (newItems.length > 0) {
-        setDisplayedMediaItems((prev) => [...prev, ...newItems])
-        setCurrentPage(nextPage)
-        setHasMore(endIndex < lightbox.mediaItems.length)
+        setDisplayedMediaItems((prev) => [...prev, ...newItems]);
+        setCurrentPage((prev) => prev + 1);
+        setHasMore(newItems.length === ITEMS_PER_PAGE);
       } else {
-        setHasMore(false)
+        setHasMore(false);
       }
-
-      setIsLoadingMore(false)
-    }, 800)
+    } catch {
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
   }
 
   // Fetch analytics for displayed media items
@@ -370,6 +380,33 @@ export default function LightboxEditPage() {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightbox?.shareLinks]);
+
+  useEffect(() => {
+    // Resolve thumbnails for displayedMediaItems
+    let cancelled = false;
+    async function resolveThumbnails() {
+      const promises = displayedMediaItems.map(async (item) => {
+        // Use thumbnailUrl directly if present
+        if (item.thumbnailUrl && item.thumbnailUrl !== '/placeholder.svg') {
+          return [item.id, item.thumbnailUrl];
+        }
+        // Use url as the S3 URI for resolution
+        if (!item.url) return [item.id, '/placeholder.svg'];
+        try {
+          const urls = await getMediaUrlsFromS3Uri(item.url);
+          return [item.id, urls?.thumbnail || '/placeholder.svg'];
+        } catch {
+          return [item.id, '/placeholder.svg'];
+        }
+      });
+      const results = await Promise.all(promises);
+      if (!cancelled) {
+        setThumbnails(Object.fromEntries(results));
+      }
+    }
+    resolveThumbnails();
+    return () => { cancelled = true; };
+  }, [displayedMediaItems]);
 
   if (!lightbox && !isLoading) {
     return (
@@ -666,6 +703,10 @@ export default function LightboxEditPage() {
     setIsPreviewOpen(true)
   }
 
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false)
+  }
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-[#0a0a0c]">
@@ -861,11 +902,11 @@ export default function LightboxEditPage() {
                                         <div className="p-4 flex items-center gap-4 w-full relative z-10">
                                         <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0 relative">
                                           <img
-                                              src={getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "video" ? (item.thumbnailUrl || "/video-placeholder.svg") : (item.signedUrl || item.thumbnailUrl || "/placeholder.svg")}
+                                              src={item.thumbnailUrl || thumbnails[item.id] || '/placeholder.svg'}
                                             alt={item.title}
                                             className="w-full h-full object-cover"
                                           />
-                                          {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "video" && (
+                                          {getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl) === "video" && (
                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                               <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
                                                 <Video className="h-4 w-4 text-white" />
@@ -880,12 +921,12 @@ export default function LightboxEditPage() {
                                             variant="outline"
                                             className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
                                           >
-                                            {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "image" ? (
+                                            {((item.type ? String(item.type) : getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl)) === "image") ? (
                                               <ImageIcon className="h-3 w-3" />
                                             ) : (
                                               <Video className="h-3 w-3" />
                                             )}
-                                            {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl)}
+                                            {item.type ? String(item.type) : getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl) || ""}
                                           </Badge>
                                           {/* Inline analytics badges */}
                                           <div className="flex gap-2 mt-2 flex-wrap">
@@ -896,7 +937,7 @@ export default function LightboxEditPage() {
                                                 <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-blue-300">
                                                   <Eye className="h-3 w-3" /> {mediaAnalytics[item.id].views ?? 0}
                                                 </span>
-                                                {getMediaTypeFromUrl(item.signedUrl || item.url || item.thumbnailUrl) === "video" && (
+                                                {getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl) === "video" && (
                                                   <>
                                                     <span className="inline-flex items-center gap-1 text-xs bg-white/10 rounded px-2 py-0.5 text-purple-300">
                                                       <Video className="h-3 w-3" /> {mediaAnalytics[item.id].playCount ?? 0}
@@ -1194,14 +1235,11 @@ export default function LightboxEditPage() {
       {lightbox && (
         <MediaPreviewModal
           isOpen={isPreviewOpen}
-          onClose={() => setIsPreviewOpen(false)}
+          onClose={handleClosePreview}
           mediaItems={displayedMediaItems}
           initialIndex={selectedMediaIndex}
-          onRequestMore={async () => {
-            if (hasMore && !isLoadingMore) {
-              await loadMoreItems()
-            }
-          }}
+          onRequestMore={async () => {}}
+          shareLinkId={""}
         />
       )}
     </ProtectedRoute>

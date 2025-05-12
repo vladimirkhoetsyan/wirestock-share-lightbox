@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { verifyJwt } from 'lib/auth-server';
 import { getSignedS3Url } from 'lib/s3';
+import { getMediaUrlsFromS3Uri } from 'lib/media-urls';
 
 // GET /api/lightboxes/[id]/media
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
@@ -34,8 +35,8 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       where: {
         ...where,
         OR: [
-          { order: { gt: current.order } },
-          { order: current.order, created_at: { gt: current.created_at } },
+          { order: { gt: current.order ?? undefined } },
+          { order: current.order ?? undefined, created_at: { gt: current.created_at ?? undefined } },
         ],
       },
       orderBy,
@@ -48,20 +49,22 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       take: limit,
     });
   }
-  // Only return signedUrl, not s3_uri
+  // Only return originalUrl, thumbnailUrl, and previewUrl
   const result = await Promise.all(items.map(async (item: any) => {
-    let signedUrl = null;
+    let urls = null;
     try {
-      signedUrl = await getSignedS3Url(item.s3_uri);
+      urls = await getMediaUrlsFromS3Uri(item.s3_uri);
     } catch (e) {}
     return {
       id: item.id,
-      signedUrl,
       media_type: item.media_type,
       duration_seconds: item.duration_seconds,
       dimensions: item.dimensions,
       order: item.order === null ? undefined : item.order,
       createdAt: item.created_at === null ? undefined : item.created_at,
+      originalUrl: urls?.original || '',
+      thumbnailUrl: urls?.thumbnail || '',
+      previewUrl: urls?.preview || '',
     };
   }));
   return NextResponse.json(result);

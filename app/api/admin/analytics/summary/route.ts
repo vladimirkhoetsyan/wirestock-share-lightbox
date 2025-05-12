@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
+import { getMediaUrlsFromS3Uri } from 'lib/media-urls';
 import { getSignedS3Url } from 'lib/s3';
 
 // Configurable inactivity timeout (in milliseconds)
@@ -67,16 +68,18 @@ export async function GET(req: NextRequest) {
   if (topMediaId) {
     const item = await prisma.media_items.findUnique({ where: { id: topMediaId } });
     if (item) {
-      let signedUrl = null;
+      let urls = null;
       try {
-        signedUrl = await getSignedS3Url(item.s3_uri);
+        urls = await getMediaUrlsFromS3Uri(item.s3_uri);
       } catch {}
       mostInteractedMediaItem = {
         id: item.id,
         title: item.s3_uri,
         media_type: item.media_type,
         s3_uri: item.s3_uri,
-        signedUrl,
+        originalUrl: urls?.original || '',
+        thumbnailUrl: urls?.thumbnail || '',
+        previewUrl: urls?.preview || '',
         count: interactionCounts[topMediaId],
       };
     }

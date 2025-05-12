@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { getSignedS3Url } from 'lib/s3';
 import { verifyJwt } from 'lib/auth-server';
+import { getMediaUrlsFromS3Uri } from 'lib/media-urls';
 
 // GET /api/public/lightboxes/[id]?shareToken=...
 // Note: For password-protected share links, the frontend must enforce password validation before calling this endpoint.
@@ -41,11 +42,11 @@ export async function GET(req: NextRequest, paramsContext: { params: { id: strin
   if (!lightbox) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
-  // Generate signed URLs for each media item
+  // Generate signed URLs for each media item (server-side)
   const mediaItems = await Promise.all((lightbox.media_items || []).map(async (item: any) => {
-    let signedUrl = '';
+    let urls = null;
     try {
-      signedUrl = await getSignedS3Url(item.s3_uri);
+      urls = await getMediaUrlsFromS3Uri(item.s3_uri);
     } catch {}
     return {
       id: item.id,
@@ -53,8 +54,9 @@ export async function GET(req: NextRequest, paramsContext: { params: { id: strin
       type: item.media_type,
       title: item.s3_uri, // Placeholder, update if you have a title field
       description: '', // Placeholder, update if you have a description field
-      thumbnailUrl: '', // Placeholder, update if you have a thumbnail field
-      signedUrl,
+      originalUrl: urls?.original || '',
+      thumbnailUrl: urls?.thumbnail || '',
+      previewUrl: urls?.preview || '',
       duration_seconds: item.duration_seconds,
       dimensions: item.dimensions,
       order: item.order,

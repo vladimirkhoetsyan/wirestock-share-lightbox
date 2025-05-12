@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from 'lib/prisma';
 import { verifyJwt } from 'lib/auth-server';
-import { getSignedS3Url } from 'lib/s3';
+import { getMediaUrlsFromS3Uri } from 'lib/media-urls';
 
 // GET /api/media/[id]
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
@@ -11,12 +11,10 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
   if (!item) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
-  let signedUrl = null;
+  let urls = null;
   try {
-    signedUrl = await getSignedS3Url(item.s3_uri);
-  } catch (e) {
-    // If signing fails, signedUrl remains null
-  }
+    urls = await getMediaUrlsFromS3Uri(item.s3_uri);
+  } catch (e) {}
   return NextResponse.json({
     id: item.id,
     s3_uri: item.s3_uri,
@@ -26,7 +24,9 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     order: item.order,
     createdAt: item.created_at,
     lightbox_id: item.lightbox_id,
-    signedUrl,
+    originalUrl: urls?.original || '',
+    thumbnailUrl: urls?.thumbnail || '',
+    previewUrl: urls?.preview || '',
   });
 }
 
