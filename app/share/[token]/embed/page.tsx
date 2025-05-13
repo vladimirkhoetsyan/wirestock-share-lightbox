@@ -26,6 +26,7 @@ export default function ShareEmbedPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const handleMediaClick = (index: number) => {
     setSelectedMediaIndex(index);
@@ -43,6 +44,7 @@ export default function ShareEmbedPage() {
         if (!linkRes.ok) throw new Error("Share link not found");
         const link = await linkRes.json();
         setShareLink(link);
+        setTheme(link.theme || 'dark');
         // Only fetch lightbox if not protected (for embed, we don't support password-protected)
         if (!link.isPasswordProtected) {
           const lbRes = await fetch(`/api/public/lightboxes/${link.lightbox_id}?shareToken=${encodeURIComponent(link.token)}`);
@@ -68,6 +70,13 @@ export default function ShareEmbedPage() {
     fetchShareData();
   }, [params.token]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.documentElement.classList.remove('dark', 'light');
+      document.documentElement.classList.add(theme);
+    }
+  }, [theme]);
+
   // Load iframe-resizer contentWindow script
   useEffect(() => {
     const script = document.createElement('script');
@@ -81,7 +90,7 @@ export default function ShareEmbedPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-12 h-12 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin"></div>
       </div>
     );
@@ -89,15 +98,15 @@ export default function ShareEmbedPage() {
 
   if (!shareLink || !lightbox) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c] p-4">
-        <div className="text-white text-center">This lightbox is not available for embedding.</div>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-foreground text-center">This lightbox is not available for embedding.</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] p-4">
-      <h2 className="text-2xl font-bold text-white mb-6 text-center">{lightbox.name}</h2>
+    <div className="min-h-screen bg-background p-4">
+      <h2 className="text-2xl font-bold text-foreground mb-6 text-center">{lightbox.name}</h2>
       <div className="media-grid">
         {lightbox.mediaItems && lightbox.mediaItems.length > 0 ? (
           lightbox.mediaItems.map((item: any, index: number) => {
@@ -113,13 +122,13 @@ export default function ShareEmbedPage() {
                 {mediaType === "video" && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
-                      <svg width="24" height="24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-foreground"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     </div>
                   </div>
                 )}
                 <div className="media-item-overlay">
                   {item.title && !/^s3:\/\//.test(item.title) && !/^https?:\/\//.test(item.title) && (
-                    <h3 className="font-medium text-white">{item.title}</h3>
+                    <h3 className="font-medium text-foreground">{item.title}</h3>
                   )}
                   {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
                 </div>

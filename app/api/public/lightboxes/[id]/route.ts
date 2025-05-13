@@ -33,10 +33,16 @@ export async function GET(req: NextRequest, paramsContext: { params: { id: strin
     }
   }
   // Fetch the lightbox and its media items
+  const offset = parseInt(searchParams.get('offset') || '0', 10);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '24', 10), 100);
   const lightbox = await prisma.lightboxes.findUnique({
     where: { id: params.id },
     include: {
-      media_items: { orderBy: { order: 'asc' } },
+      media_items: {
+        orderBy: { order: 'asc' },
+        skip: offset,
+        take: limit,
+      },
     },
   });
   if (!lightbox) {

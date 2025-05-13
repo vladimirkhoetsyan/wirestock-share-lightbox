@@ -26,6 +26,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       name: link.name,
       isPasswordProtected: !!link.password_hash,
       createdAt: link.created_at,
+      theme: link.theme || "dark",
       analytics: {
         totalViews: link.analytics?.totalViews ?? 0,
         mediaInteractions: link.analytics?.mediaInteractions ?? 0,
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
   if (!payload || !payload.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const { name, password } = await req.json();
+  const { name, password, theme } = await req.json();
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
       token: shareToken,
       name,
       password_hash,
+      theme: theme || "dark",
     },
   });
   return NextResponse.json({
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     name: newLink.name,
     isPasswordProtected: !!newLink.password_hash,
     createdAt: newLink.created_at,
+    theme: newLink.theme || "dark",
     analytics: {
       totalViews: 0,
       mediaInteractions: 0,

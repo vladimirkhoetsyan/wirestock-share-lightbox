@@ -26,6 +26,7 @@ export async function GET(req: NextRequest, paramsContext: { params: { token: st
     lightbox_id: shareLink.lightbox_id,
     isPasswordProtected: !!shareLink.password_hash,
     createdAt: shareLink.created_at,
+    theme: shareLink.theme || "dark",
     analytics: {
       totalViews: 0,
       mediaInteractions: 0,

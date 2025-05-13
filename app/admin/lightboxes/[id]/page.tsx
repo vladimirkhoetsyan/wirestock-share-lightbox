@@ -270,6 +270,7 @@ export default function LightboxEditPage() {
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [showEmbedFor, setShowEmbedFor] = useState<string | null>(null);
   const embedInputRef = useRef<HTMLInputElement>(null);
+  const [newShareTheme, setNewShareTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -629,20 +630,22 @@ export default function LightboxEditPage() {
     if (!token || !id) return
     try {
       await createShareLink(id, {
-      name: newShareName,
-      isPasswordProtected,
-      password: isPasswordProtected ? newSharePassword : undefined,
+        name: newShareName,
+        isPasswordProtected,
+        password: isPasswordProtected ? newSharePassword : undefined,
+        theme: newShareTheme,
       }, token)
       // Refresh share links
       const links = await fetchShareLinks(id, token)
       setLightbox((prev: any) => ({ ...prev, shareLinks: links }))
-    setNewShareName("")
-    setNewSharePassword("")
-    setIsPasswordProtected(false)
-    toast({
-      title: "Share link created",
-      description: "New share link has been created successfully",
-    })
+      setNewShareName("")
+      setNewSharePassword("")
+      setIsPasswordProtected(false)
+      setNewShareTheme('dark')
+      toast({
+        title: "Share link created",
+        description: "New share link has been created successfully",
+      })
     } catch {
       toast({ title: "Error", description: "Failed to create share link", variant: "destructive" })
     }
@@ -1086,6 +1089,31 @@ export default function LightboxEditPage() {
                                 />
                               </div>
                             )}
+                            <div className="space-y-2">
+                              <Label className="text-white">Theme</Label>
+                              <div className="flex gap-4">
+                                <label className="flex items-center gap-2 text-white">
+                                  <input
+                                    type="radio"
+                                    name="share-theme"
+                                    value="dark"
+                                    checked={newShareTheme === 'dark'}
+                                    onChange={() => setNewShareTheme('dark')}
+                                  />
+                                  Dark
+                                </label>
+                                <label className="flex items-center gap-2 text-white">
+                                  <input
+                                    type="radio"
+                                    name="share-theme"
+                                    value="light"
+                                    checked={newShareTheme === 'light'}
+                                    onChange={() => setNewShareTheme('light')}
+                                  />
+                                  Light
+                                </label>
+                              </div>
+                            </div>
                           </div>
                           <DialogFooter>
                             <Button

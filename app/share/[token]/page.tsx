@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,13 @@ export default function SharePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [shakePassword, setShakePassword] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [mediaItems, setMediaItems] = useState<any[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const lastItemRef = useRef<null | HTMLDivElement>(null);
+  const observer = useRef<IntersectionObserver | null>(null);
 
   // Fetch share link and lightbox from backend
   useEffect(() => {
@@ -83,6 +90,7 @@ export default function SharePage() {
             share_link_id: link.id,
             password_correct: true,
           });
+          setTheme(link.theme || 'dark');
         } else {
           setLightbox(null)
         }
@@ -95,6 +103,13 @@ export default function SharePage() {
     }
     fetchShareData()
   }, [params.token])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.documentElement.classList.remove('dark', 'light');
+      document.documentElement.classList.add(theme);
+    }
+  }, [theme]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -152,9 +167,66 @@ export default function SharePage() {
     }
   }
 
+  // Fetch initial media items and on offset change
+  useEffect(() => {
+    if (!shareLink || !isAuthenticated) return;
+    const fetchMedia = async () => {
+      setIsLoading(true);
+      try {
+        const lbRes = await fetch(`/api/public/lightboxes/${shareLink.lightbox_id}?shareToken=${encodeURIComponent(shareLink.token)}&offset=0&limit=24`, {
+          headers: localStorage.getItem(`share_access_${shareLink.token}`)
+            ? { Authorization: `Bearer ${localStorage.getItem(`share_access_${shareLink.token}`)}` }
+            : undefined,
+        });
+        if (!lbRes.ok) throw new Error("Lightbox not found");
+        const lb = await lbRes.json();
+        setLightbox(lb);
+        setMediaItems(lb.mediaItems);
+        setOffset(lb.mediaItems.length);
+        setHasMore(lb.mediaItems.length === 24);
+      } catch (err) {
+        setLightbox(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMedia();
+  }, [shareLink, isAuthenticated]);
+
+  // Infinite scroll observer
+  const loadMore = useCallback(async () => {
+    if (!shareLink || !isAuthenticated || isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const lbRes = await fetch(`/api/public/lightboxes/${shareLink.lightbox_id}?shareToken=${encodeURIComponent(shareLink.token)}&offset=${offset}&limit=24`, {
+        headers: localStorage.getItem(`share_access_${shareLink.token}`)
+          ? { Authorization: `Bearer ${localStorage.getItem(`share_access_${shareLink.token}`)}` }
+          : undefined,
+      });
+      if (!lbRes.ok) throw new Error("Lightbox not found");
+      const lb = await lbRes.json();
+      setMediaItems((prev: any[]) => [...prev, ...lb.mediaItems]);
+      setOffset(offset + lb.mediaItems.length);
+      setHasMore(lb.mediaItems.length === 24);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [shareLink, isAuthenticated, offset, isLoadingMore, hasMore]);
+
+  const lastMediaRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new window.IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMore();
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [isLoadingMore, hasMore, loadMore]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-12 h-12 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin"></div>
       </div>
     )
@@ -163,7 +235,7 @@ export default function SharePage() {
   // Show password prompt if shareLink exists, is password protected, and not authenticated
   if (shareLink && shareLink.isPasswordProtected && !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c] p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -180,7 +252,7 @@ export default function SharePage() {
               <Lock className="h-8 w-8 text-blue-400" />
             </div>
 
-            <h1 className="text-2xl font-bold text-center mb-2 text-white">Password Protected</h1>
+            <h1 className="text-2xl font-bold text-center mb-2 text-foreground">Password Protected</h1>
             <p className="text-gray-400 text-center mb-6">
               This lightbox is password protected. Please enter the password to view it.
             </p>
@@ -188,7 +260,7 @@ export default function SharePage() {
             <form onSubmit={handlePasswordSubmit}>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-white">
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">
                     Password
                   </Label>
                   <Input
@@ -197,19 +269,23 @@ export default function SharePage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="bg-[#1a1a1c] border-white/10 h-12 text-white"
+                    className={theme === 'dark' ? 'bg-gradient-to-r from-[#23232b] to-[#18181b] border-white/10 h-12' : ''}
                   />
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                  className={
+                    theme === 'dark'
+                      ? 'w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                      : 'w-full h-12 bg-primary text-primary-foreground'
+                  }
                   disabled={isAuthenticating}
                 >
                   {isAuthenticating ? (
                     <div className="flex items-center">
                       <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-foreground"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -245,13 +321,13 @@ export default function SharePage() {
   // Show error only if shareLink is null
   if (!shareLink) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0c] p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
           <Lock className="h-8 w-8 text-red-400" />
         </div>
-        <h1 className="text-2xl font-bold mb-2 text-white">Share link not found</h1>
+        <h1 className="text-2xl font-bold mb-2 text-foreground">Share link not found</h1>
         <p className="text-gray-400 mb-6 text-center">This share link may have been revoked or does not exist.</p>
-        <Button asChild className="bg-white/10 hover:bg-white/20 text-white">
+        <Button asChild className="bg-white/10 hover:bg-white/20 text-foreground">
           <a href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Return Home
@@ -264,19 +340,19 @@ export default function SharePage() {
   // If lightbox is not loaded yet, show spinner or nothing
   if (!lightbox) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-12 h-12 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c]">
-      <header className="bg-[#0a0a0c]/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-10">
+    <div className="min-h-screen bg-background">
+      <header className="bg-background/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">{lightbox.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{lightbox.name}</h1>
               <p className="text-gray-400">{lightbox.description}</p>
             </div>
             <div className="flex items-center gap-4">
@@ -288,7 +364,7 @@ export default function SharePage() {
               {shareLink.isPasswordProtected && (
                 <Button
                   variant="outline"
-                  className="ml-4 text-white border-white/20 hover:bg-white/10"
+                  className="ml-4 text-foreground border-white/20 hover:bg-white/10"
                   onClick={handleLogout}
                 >
                   Logout
@@ -301,7 +377,7 @@ export default function SharePage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="media-grid">
-          {lightbox.mediaItems.map((item: any, index: any) => {
+          {mediaItems.map((item: any, index: any) => {
             const mediaType = getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl);
             return (
               <motion.div
@@ -311,24 +387,30 @@ export default function SharePage() {
                 transition={{ duration: 0.5, delay: index * 0.05 }}
                 className="media-item"
                 onClick={() => handleMediaClick(index)}
+                ref={index === mediaItems.length - 1 ? lastMediaRef : undefined}
               >
                 <img src={item.thumbnailUrl || '/placeholder.svg'} alt={item.title} />
                 {mediaType === "video" && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
-                      <Play className="h-6 w-6 text-white" />
+                    <div className="w-14 h-14 glass-card rounded-full flex items-center justify-center shadow-lg border border-white/10 backdrop-blur-md">
+                      <Play className="h-7 w-7 text-foreground" />
                     </div>
                   </div>
                 )}
                 <div className="media-item-overlay">
                   {item.title && !/^s3:\/\//.test(item.title) && !/^https?:\/\//.test(item.title) && (
-                    <h3 className="font-medium text-white">{item.title}</h3>
+                    <h3 className="font-medium text-foreground">{item.title}</h3>
                   )}
                   {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
                 </div>
               </motion.div>
             );
           })}
+          {isLoadingMore && (
+            <div className="py-4 flex justify-center col-span-full">
+              <div className="w-8 h-8 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin"></div>
+            </div>
+          )}
         </div>
       </main>
 

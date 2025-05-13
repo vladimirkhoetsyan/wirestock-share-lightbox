@@ -215,7 +215,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 z-10 rounded-full bg-black/50 hover:bg-black/70"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 w-10 absolute top-4 right-4 z-10 rounded-full bg-popover hover:bg-popover/80 text-foreground"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -232,7 +232,9 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 flex items-center justify-center"
                 >
-                  <div className="w-12 h-12 rounded-full border-4 border-white/10 border-t-white animate-spin"></div>
+                  <div className="w-12 h-12 bg-popover rounded-full flex items-center justify-center">
+                    <Play className="h-6 w-6 text-foreground" />
+                  </div>
                 </motion.div>
               ) : currentMediaType === "image" ? (
                 <motion.img
@@ -303,7 +305,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-popover text-foreground hover:bg-popover/80"
               onClick={handlePrevious}
               disabled={currentIndex === 0}
             >
@@ -312,7 +314,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-popover text-foreground hover:bg-popover/80"
               onClick={handleNext}
               disabled={currentIndex === mediaItems.length - 1}
             >
