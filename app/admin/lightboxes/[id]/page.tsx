@@ -31,6 +31,7 @@ import {
   Upload,
   Maximize,
   BarChart2,
+  Code2,
 } from "lucide-react"
 import {
   Dialog,
@@ -267,6 +268,8 @@ export default function LightboxEditPage() {
   const [shareLinkAnalytics, setShareLinkAnalytics] = useState<Record<string, any>>({});
   const [shareLinkAnalyticsLoading, setShareLinkAnalyticsLoading] = useState<Record<string, boolean>>({});
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+  const [showEmbedFor, setShowEmbedFor] = useState<string | null>(null);
+  const embedInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -1124,23 +1127,34 @@ export default function LightboxEditPage() {
                                         Created on {new Date(link.createdAt).toLocaleDateString()}
                                       </p>
                                     </div>
-                                    {link.isPasswordProtected ? (
-                                      <Badge
-                                        variant="outline"
-                                        className="flex items-center gap-1 border-white/20 text-white"
-                                      >
-                                        <Lock className="h-3 w-3" />
-                                        Password Protected
-                                      </Badge>
-                                    ) : (
-                                      <Badge
-                                        variant="outline"
-                                        className="flex items-center gap-1 border-white/20 text-white"
-                                      >
-                                        <Unlock className="h-3 w-3" />
-                                        Public
-                                      </Badge>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                      {link.isPasswordProtected ? (
+                                        <Badge
+                                          variant="outline"
+                                          className="flex items-center gap-1 border-white/20 text-white"
+                                        >
+                                          <Lock className="h-3 w-3" />
+                                          Password Protected
+                                        </Badge>
+                                      ) : (
+                                        <>
+                                          <Badge
+                                            variant="outline"
+                                            className="flex items-center gap-1 border-white/20 text-white"
+                                          >
+                                            <Unlock className="h-3 w-3" />
+                                            Public
+                                          </Badge>
+                                          <button
+                                            className="ml-2 text-blue-400 hover:text-blue-200"
+                                            title="Embed on your website"
+                                            onClick={() => setShowEmbedFor(link.token)}
+                                          >
+                                            <Code2 className="h-5 w-5" />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                   {/* Analytics badges row */}
                                   <div className="flex flex-wrap gap-2 mb-4 mt-2">
@@ -1208,6 +1222,44 @@ export default function LightboxEditPage() {
                                       Revoke
                                     </Button>
                                   </div>
+                                  {/* Embed Popup for this link */}
+                                  {showEmbedFor === link.token && (
+                                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                                      <div className="bg-[#18181B] rounded-xl p-8 shadow-lg w-full max-w-lg relative">
+                                        <button
+                                          className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                                          onClick={() => setShowEmbedFor(null)}
+                                          aria-label="Close"
+                                        >
+                                          ×
+                                        </button>
+                                        <h2 className="text-xl font-bold text-white mb-4">Embed This Share Link</h2>
+                                        <p className="text-gray-300 mb-4">Copy and paste this code into your website or Framer project:</p>
+                                        <div className="flex items-center gap-2 mb-4">
+                                          <input
+                                            ref={embedInputRef}
+                                            type="text"
+                                            readOnly
+                                            value={`<iframe src='${typeof window !== 'undefined' ? window.location.origin : ''}/share/${link.token}/embed' style='width:100%;border:none;' allowfullscreen></iframe>`}
+                                            className="flex-1 px-3 py-2 rounded bg-white/10 text-white font-mono text-xs border border-white/20"
+                                            onFocus={e => e.target.select()}
+                                          />
+                                          <Button
+                                            onClick={() => {
+                                              if (embedInputRef.current) {
+                                                embedInputRef.current.select();
+                                                document.execCommand('copy');
+                                              }
+                                            }}
+                                            className="bg-blue-600 text-white px-3 py-2 rounded"
+                                          >
+                                            Copy
+                                          </Button>
+                                        </div>
+                                        <div className="text-xs text-gray-400">This will embed the lightbox in an iframe that automatically resizes to fit its content.</div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, BarChart2, ImageIcon, Video } from "lucide-react";
+import { Download, BarChart2, ImageIcon, Video, Code2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import MediaPreviewModal from "@/components/media-preview-modal";
 import countryCentroids from "@/lib/country-centroids.json";
@@ -41,6 +41,8 @@ export default function ShareLinkAnalyticsPage() {
   const lightboxId = searchParams.get("lightboxId");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [showEmbed, setShowEmbed] = useState(false);
+  const embedInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!shareLinkId) return;
@@ -84,7 +86,54 @@ export default function ShareLinkAnalyticsPage() {
               <Download className="h-4 w-4" />
               Download CSV
             </Button>
+            <Button
+              onClick={() => setShowEmbed(true)}
+              className="ml-2 bg-gradient-to-r from-green-500 to-blue-600 text-white flex items-center gap-2"
+              title="Embed on your website"
+            >
+              <Code2 className="h-4 w-4" />
+              Embed
+            </Button>
           </div>
+
+          {/* Embed Popup */}
+          {showEmbed && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+              <div className="bg-[#18181B] rounded-xl p-8 shadow-lg w-full max-w-lg relative">
+                <button
+                  className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                  onClick={() => setShowEmbed(false)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+                <h2 className="text-xl font-bold text-white mb-4">Embed This Share Link</h2>
+                <p className="text-gray-300 mb-4">Copy and paste this code into your website or Framer project:</p>
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    ref={embedInputRef}
+                    type="text"
+                    readOnly
+                    value={`<iframe src='${typeof window !== 'undefined' ? window.location.origin : ''}/share/${shareLinkId}/embed' style='width:100%;border:none;' allowfullscreen></iframe>`}
+                    className="flex-1 px-3 py-2 rounded bg-white/10 text-white font-mono text-xs border border-white/20"
+                    onFocus={e => e.target.select()}
+                  />
+                  <Button
+                    onClick={() => {
+                      if (embedInputRef.current) {
+                        embedInputRef.current.select();
+                        document.execCommand('copy');
+                      }
+                    }}
+                    className="bg-blue-600 text-white px-3 py-2 rounded"
+                  >
+                    Copy
+                  </Button>
+                </div>
+                <div className="text-xs text-gray-400">This will embed the lightbox in an iframe that automatically resizes to fit its content.</div>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="glass-card rounded-xl p-8 text-center text-white">Loading analytics...</div>
