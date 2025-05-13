@@ -76,20 +76,43 @@ export async function POST(req: NextRequest) {
     // --- Notification logic for lightbox_open ---
     if (data.event === 'lightbox_open' && data.share_link_id) {
       try {
+        // Configurable inactivity timeout (in milliseconds)
+        const SESSION_TIMEOUT_MINUTES = 30;
+        const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000;
         // Fetch the share link and its lightbox
         const shareLink = await prisma.share_links.findUnique({
           where: { id: data.share_link_id },
           include: { lightboxes: true },
         });
         if (shareLink && shareLink.lightbox_id) {
-          await createNotificationWithReceiptsAndSlack({
-            lightbox_id: shareLink.lightbox_id,
-            share_link_id: shareLink.id,
-            session_id: data.session_id || '',
-            password_correct: !!data.password_correct,
-            entered_at: new Date(),
-            sendSlack: true,
+          // Check for the latest notification for this session/share_link
+          const lastNotification = await prisma.notification.findFirst({
+            where: {
+              session_id: data.session_id || '',
+              share_link_id: data.share_link_id,
+            },
+            orderBy: { entered_at: 'desc' },
           });
+          const now = new Date();
+          let shouldNotify = false;
+          if (!lastNotification) {
+            shouldNotify = true;
+          } else {
+            const lastEntered = new Date(lastNotification.entered_at);
+            if (now.getTime() - lastEntered.getTime() > SESSION_TIMEOUT_MS) {
+              shouldNotify = true;
+            }
+          }
+          if (shouldNotify) {
+            await createNotificationWithReceiptsAndSlack({
+              lightbox_id: shareLink.lightbox_id,
+              share_link_id: shareLink.id,
+              session_id: data.session_id || '',
+              password_correct: !!data.password_correct,
+              entered_at: now,
+              sendSlack: true,
+            });
+          }
         }
       } catch (notifErr) {
         // Log but do not block analytics event creation
