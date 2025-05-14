@@ -27,12 +27,12 @@ export function getMediaTypeFromKey(key: string): 'image' | 'video' | undefined 
 }
 
 // --- Serverless image handler helpers ---
-const IMAGE_HANDLER_CLOUDFRONT = 'https://dhmaecov9jm1y.cloudfront.net';
-const IMAGE_HANDLER_SIGNATURE_SECRET = 'NNj74NGff2279puPNUvC';
+const IMAGE_HANDLER_CLOUDFRONT = process.env.IMAGE_HANDLER_CLOUDFRONT!;
+const IMAGE_HANDLER_SIGNATURE_SECRET = process.env.IMAGE_HANDLER_SIGNATURE_SECRET!;
 
 // Special CDN for 'wirestock-original-production' bucket
-const IMAGE_CDN_CLOUDFRONT = 'https://d1vcy8ih94g58p.cloudfront.net';
-const IMAGE_CDN_SIGNATURE_SECRET = '7ZvmoLffU2pJLkLZzxZu';
+const WIRESTOCK_ORIGINAL_PRODUCTION_CLOUDFRONT = process.env.WIRESTOCK_ORIGINAL_PRODUCTION_CLOUDFRONT!;
+const WIRESTOCK_ORIGINAL_PRODUCTION_SIGNATURE_SECRET = process.env.WIRESTOCK_ORIGINAL_PRODUCTION_SIGNATURE_SECRET!;
 
 function getServerlessImageHandlerTransformationUrl(s3Path: string, bucket: string, width: number, height: number): string {
   const request = {
@@ -64,8 +64,8 @@ function getImageCdnTransformationUrl(s3Path: string, bucket: string, width: num
   };
   const requestJsonData = JSON.stringify(request);
   const transformationRequest = Buffer.from(requestJsonData, 'utf8').toString('base64');
-  const signature = getTransformationSignature(transformationRequest, IMAGE_CDN_SIGNATURE_SECRET);
-  return `${IMAGE_CDN_CLOUDFRONT}/${transformationRequest}?signature=${signature}`;
+  const signature = getTransformationSignature(transformationRequest, WIRESTOCK_ORIGINAL_PRODUCTION_SIGNATURE_SECRET);
+  return `${WIRESTOCK_ORIGINAL_PRODUCTION_CLOUDFRONT}/${transformationRequest}?signature=${signature}`;
 }
 
 function getTransformationSignature(encodedRequest: string, secret: string) {
