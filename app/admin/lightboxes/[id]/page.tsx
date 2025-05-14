@@ -892,20 +892,8 @@ export default function LightboxEditPage() {
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
-                                        className="bg-[#1a1a1c] border border-white/10 rounded-2xl flex relative overflow-hidden"
+                                        className="glass-card rounded-xl flex items-center gap-4 p-4"
                                       >
-                                        {/* Glassmorphism overlay */}
-                                        <div
-                                          style={{
-                                            position: "absolute",
-                                            inset: 0,
-                                            zIndex: 0,
-                                            pointerEvents: "none",
-                                            backdropFilter: "blur(12px)",
-                                            WebkitBackdropFilter: "blur(12px)",
-                                          }}
-                                        />
-                                        <div className="p-4 flex items-center gap-4 w-full relative z-10">
                                         <div className="w-16 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0 relative">
                                           <img
                                               src={item.thumbnailUrl || thumbnails[item.id] || '/placeholder.svg'}
@@ -998,7 +986,6 @@ export default function LightboxEditPage() {
                                             <Trash2 className="h-4 w-4" />
                                           </Button>
                                           </div>
-                                        </div>
                                       </div>
                                     )}
                                   </Draggable>
@@ -1147,7 +1134,7 @@ export default function LightboxEditPage() {
                               const interactions = analytics?.mostInteractedItems?.reduce((sum: number, item: any) => sum + (item.count ?? 0), 0) ?? 0;
                               const topItem = analytics?.mostInteractedItems?.[0];
                               return (
-                                <div key={link.id} className="bg-[#1a1a1c] border border-white/10 rounded-2xl shadow-xl p-4">
+                                <div key={link.id} className="glass-card rounded-xl p-4">
                                   <div className="flex justify-between items-start mb-3">
                                     <div>
                                       <h3 className="font-medium text-lg text-white">{link.name}</h3>
