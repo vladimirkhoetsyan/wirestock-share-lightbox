@@ -750,7 +750,7 @@ export default function LightboxEditPage() {
             </div>
 
             {isLoading ? (
-              <div className="glass-card rounded-xl p-6 animate-pulse">
+              <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 animate-pulse">
                 <div className="h-6 bg-white/10 rounded w-1/4 mb-4"></div>
                 <div className="h-24 bg-white/10 rounded w-full mb-6"></div>
                 <div className="h-6 bg-white/10 rounded w-1/3 mb-4"></div>
@@ -769,7 +769,7 @@ export default function LightboxEditPage() {
                           id="name"
                           value={lightbox.name}
                           onChange={(e) => setLightbox({ ...lightbox, name: e.target.value })}
-                          className="bg-[#1a1a1c] border-white/10 text-white"
+                          className="flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-[#1a1a1c] border-white/10 text-white"
                         />
                       </div>
 
@@ -782,7 +782,7 @@ export default function LightboxEditPage() {
                           value={lightbox.description ?? ""}
                           onChange={(e) => setLightbox({ ...lightbox, description: e.target.value })}
                           rows={3}
-                          className="bg-[#1a1a1c] border-white/10 text-white"
+                          className="flex h-24 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-[#1a1a1c] border-white/10 text-white"
                         />
                       </div>
                     </div>
@@ -823,7 +823,7 @@ export default function LightboxEditPage() {
                           onChange={(e) => handleKeywordsChange(e.target.value)}
                           rows={2}
                           placeholder="nature, landscape, wildlife"
-                          className="bg-[#1a1a1c] border-white/10 text-white"
+                          className="flex h-24 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-[#1a1a1c] border-white/10 text-white"
                         />
                       </div>
                     </div>
@@ -853,7 +853,7 @@ export default function LightboxEditPage() {
                             placeholder="Paste S3 URI (e.g., s3://bucket/path/to/file.jpg)"
                             value={newMediaUrl}
                             onChange={(e) => setNewMediaUrl(e.target.value)}
-                            className="bg-[#1a1a1c] border-white/10 text-white"
+                            className="flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-[#1a1a1c] border-white/10 text-white"
                           />
                           <Button
                             onClick={handleAddMedia}
@@ -892,7 +892,7 @@ export default function LightboxEditPage() {
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
-                                        className="glass-card rounded-xl flex relative overflow-hidden"
+                                        className="bg-[#1a1a1c] border border-white/10 rounded-2xl flex relative overflow-hidden"
                                       >
                                         {/* Glassmorphism overlay */}
                                         <div
@@ -1045,7 +1045,7 @@ export default function LightboxEditPage() {
                             Create New Share Link
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="glass-card border-white/10">
+                        <DialogContent className="bg-[#1a1a1c] border border-white/10 rounded-2xl shadow-xl">
                           <DialogHeader>
                             <DialogTitle className="text-white">Create Share Link</DialogTitle>
                             <DialogDescription className="text-gray-400">
@@ -1062,7 +1062,7 @@ export default function LightboxEditPage() {
                                 value={newShareName}
                                 onChange={(e) => setNewShareName(e.target.value)}
                                 placeholder="e.g., Client Review"
-                                className="bg-[#1a1a1c] border-white/10 text-white"
+                                className="flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-[#1a1a1c] border-white/10 text-white"
                               />
                             </div>
                             <div className="flex items-center space-x-2">
@@ -1085,7 +1085,7 @@ export default function LightboxEditPage() {
                                   type="password"
                                   value={newSharePassword}
                                   onChange={(e) => setNewSharePassword(e.target.value)}
-                                  className="bg-[#1a1a1c] border-white/10 text-white"
+                                  className="flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-[#1a1a1c] border-white/10 text-white"
                                 />
                               </div>
                             )}
@@ -1147,7 +1147,7 @@ export default function LightboxEditPage() {
                               const interactions = analytics?.mostInteractedItems?.reduce((sum: number, item: any) => sum + (item.count ?? 0), 0) ?? 0;
                               const topItem = analytics?.mostInteractedItems?.[0];
                               return (
-                                <div key={link.id} className="glass-card rounded-xl p-4">
+                                <div key={link.id} className="bg-[#1a1a1c] border border-white/10 rounded-2xl shadow-xl p-4">
                                   <div className="flex justify-between items-start mb-3">
                                     <div>
                                       <h3 className="font-medium text-lg text-white">{link.name}</h3>
@@ -1253,7 +1253,7 @@ export default function LightboxEditPage() {
                                   {/* Embed Popup for this link */}
                                   {showEmbedFor === link.token && (
                                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-                                      <div className="bg-[#18181B] rounded-xl p-8 shadow-lg w-full max-w-lg relative">
+                                      <div className="bg-[#1a1a1c] rounded-xl p-8 shadow-lg w-full max-w-lg relative">
                                         <button
                                           className="absolute top-2 right-2 text-gray-400 hover:text-white"
                                           onClick={() => setShowEmbedFor(null)}

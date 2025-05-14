@@ -135,34 +135,34 @@ export default function DashboardPage() {
                   </div>
                 ) : summary ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    <Card className="glass-card p-6 flex flex-col items-center">
-                      <span className="text-2xl font-bold text-blue-400">{summary.totalLightboxes}</span>
-                      <span className="text-gray-300 mt-2">Total Lightboxes</span>
-                    </Card>
-                    <Card className="glass-card p-6 flex flex-col items-center">
-                      <span className="text-2xl font-bold text-purple-400">{summary.totalMediaItems}</span>
-                      <span className="text-gray-300 mt-2">Total Media Items</span>
-                    </Card>
-                    <Card className="glass-card p-6 flex flex-col items-center">
-                      <span className="text-2xl font-bold text-cyan-400">{summary.totalShareLinks}</span>
-                      <span className="text-gray-300 mt-2">Total Share Links</span>
-                    </Card>
-                    <Card className="glass-card p-6 flex flex-col items-center">
-                      <span className="text-2xl font-bold text-yellow-400">{summary.totalViews}</span>
-                      <span className="text-gray-300 mt-2">Total Views</span>
-                    </Card>
-                    <Card className="glass-card p-6 flex flex-col items-center">
-                      <span className="text-2xl font-bold text-green-400">{summary.uniqueSessions}</span>
-                      <span className="text-gray-300 mt-2">Unique Sessions</span>
-                    </Card>
-                    <Card className="glass-card p-6 flex flex-col items-center">
-                      <span className="text-2xl font-bold text-pink-400">{summary.uniqueDevices}</span>
-                      <span className="text-gray-300 mt-2">Unique Devices</span>
-                    </Card>
-                    <Card className="glass-card p-6 flex flex-col items-center">
-                      <span className="text-2xl font-bold text-orange-400">{formatDuration(summary.avgSessionDuration)}</span>
-                      <span className="text-gray-300 mt-2">Avg. Session Duration</span>
-                    </Card>
+                    <div className="stats-item">
+                      <span className="stats-number text-blue-400">{summary.totalLightboxes}</span>
+                      <span className="stats-label">Total Lightboxes</span>
+                    </div>
+                    <div className="stats-item">
+                      <span className="stats-number text-purple-400">{summary.totalMediaItems}</span>
+                      <span className="stats-label">Total Media Items</span>
+                    </div>
+                    <div className="stats-item">
+                      <span className="stats-number text-cyan-400">{summary.totalShareLinks}</span>
+                      <span className="stats-label">Total Share Links</span>
+                    </div>
+                    <div className="stats-item">
+                      <span className="stats-number text-yellow-400">{summary.totalViews}</span>
+                      <span className="stats-label">Total Views</span>
+                    </div>
+                    <div className="stats-item">
+                      <span className="stats-number text-green-400">{summary.uniqueSessions}</span>
+                      <span className="stats-label">Unique Sessions</span>
+                    </div>
+                    <div className="stats-item">
+                      <span className="stats-number text-pink-400">{summary.uniqueDevices}</span>
+                      <span className="stats-label">Unique Devices</span>
+                    </div>
+                    <div className="stats-item">
+                      <span className="stats-number text-orange-400">{formatDuration(summary.avgSessionDuration)}</span>
+                      <span className="stats-label">Avg. Session Duration</span>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -184,7 +184,7 @@ export default function DashboardPage() {
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="glass-card rounded-xl p-6 h-64 animate-pulse">
+                  <div key={i} className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 h-64 animate-pulse">
                     <div className="h-6 bg-white/10 rounded w-3/4 mb-4"></div>
                     <div className="h-4 bg-white/10 rounded w-full mb-6"></div>
                     <div className="flex gap-2 mb-4">
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
-                    <Card className="glass-card overflow-hidden h-full flex flex-col rounded-xl">
+                    <Card className="border bg-card text-card-foreground shadow-sm glass-card overflow-hidden h-full flex flex-col rounded-xl">
                       <div className="p-6 flex-grow">
                         <h3 className="text-xl font-bold mb-2 text-white">{lightbox.name}</h3>
                         <p className="text-gray-300 text-sm mb-4 line-clamp-2">{lightbox.description}</p>

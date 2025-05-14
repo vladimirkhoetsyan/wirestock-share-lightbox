@@ -250,7 +250,7 @@ export default function SharePage() {
           className="w-full max-w-md"
         >
           <motion.div
-            className="glass-card rounded-xl p-8"
+            className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-8"
             animate={shakePassword ? { x: [0, -10, 10, -10, 10, 0] } : {}}
             transition={{ duration: 0.4 }}
             onAnimationComplete={() => setShakePassword(false)}
@@ -276,7 +276,7 @@ export default function SharePage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className={theme === 'dark' ? 'bg-gradient-to-r from-[#23232b] to-[#18181b] border-white/10 h-12' : ''}
+                    className="flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-[#1a1a1c] border-white/10 text-white"
                   />
                 </div>
 
@@ -399,7 +399,7 @@ export default function SharePage() {
                 <img src={item.thumbnailUrl || '/placeholder.svg'} alt={item.title} />
                 {mediaType === "video" && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-14 h-14 glass-card rounded-full flex items-center justify-center shadow-lg border border-white/10 backdrop-blur-md">
+                    <div className="w-14 h-14 bg-[#18181b] border border-[#232329] rounded-full flex items-center justify-center shadow-lg backdrop-blur-md">
                       <Play className="h-7 w-7 text-foreground" />
                     </div>
                   </div>

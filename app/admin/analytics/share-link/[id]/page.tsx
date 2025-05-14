@@ -136,31 +136,31 @@ export default function ShareLinkAnalyticsPage() {
           )}
 
           {loading ? (
-            <div className="glass-card rounded-xl p-8 text-center text-white">Loading analytics...</div>
+            <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-8 text-center text-white">Loading analytics...</div>
           ) : analytics ? (
             <>
               {/* Summary Tiles */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                <Card className="glass-card p-6 flex flex-col items-center">
+                <Card className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 flex flex-col items-center">
                   <span className="text-2xl font-bold text-blue-400">{analytics.totalViews}</span>
                   <span className="text-gray-300 mt-2">Total Views</span>
                 </Card>
-                <Card className="glass-card p-6 flex flex-col items-center">
+                <Card className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 flex flex-col items-center">
                   <span className="text-2xl font-bold text-purple-400">{analytics.totalSessions}</span>
                   <span className="text-gray-300 mt-2">Unique Sessions</span>
                 </Card>
-                <Card className="glass-card p-6 flex flex-col items-center">
+                <Card className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 flex flex-col items-center">
                   <span className="text-2xl font-bold text-green-400">{analytics.uniqueDevices}</span>
                   <span className="text-gray-300 mt-2">Unique Devices</span>
                 </Card>
-                <Card className="glass-card p-6 flex flex-col items-center">
+                <Card className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 flex flex-col items-center">
                   <span className="text-2xl font-bold text-yellow-400">{formatDuration(analytics.avgSessionDuration)}</span>
                   <span className="text-gray-300 mt-2">Avg. Session Duration</span>
                 </Card>
               </div>
 
               {/* Time Series Chart */}
-              <div className="glass-card rounded-xl p-6 mb-10">
+              <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 mb-10">
                 <h2 className="text-xl font-bold text-white mb-4">Engagement by Hour</h2>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
@@ -174,7 +174,7 @@ export default function ShareLinkAnalyticsPage() {
               </div>
 
               {/* Most Interacted Items */}
-              <div className="glass-card rounded-xl p-6 mb-10">
+              <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 mb-10">
                 <h2 className="text-xl font-bold text-white mb-4">Top Interacted Media Items</h2>
                 <ul className="text-white space-y-2">
                   {analytics.mostInteractedItems && analytics.mostInteractedItems.length > 0 ? (
@@ -219,7 +219,7 @@ export default function ShareLinkAnalyticsPage() {
               </div>
 
               {/* Geolocation Map Widget */}
-              <div className="glass-card rounded-xl p-6 mt-10">
+              <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-6 mt-10">
                 <h2 className="text-xl font-bold text-white mb-4">Activity Map</h2>
                 <ActivityMap activityLocations={analytics.activityLocations} countryCentroids={countryCentroids} />
               </div>
@@ -236,7 +236,7 @@ export default function ShareLinkAnalyticsPage() {
               )}
             </>
           ) : (
-            <div className="glass-card rounded-xl p-8 text-center text-white">No analytics data found.</div>
+            <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-8 text-center text-white">No analytics data found.</div>
           )}
         </div>
       </main>

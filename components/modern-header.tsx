@@ -65,7 +65,7 @@ export default function ModernHeader() {
                   )}
                 </Button>
                 {notifOpen && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.2 }} className="absolute right-0 mt-2 w-96 max-w-[90vw] glass-card rounded-xl shadow-lg border border-white/10 bg-black/90 z-50">
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.2 }} className="absolute right-0 mt-2 w-96 max-w-[90vw] bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl z-50">
                     <div className="p-4 border-b border-white/10 flex items-center justify-between">
                       <span className="font-bold text-white">Notifications</span>
                       {loading && <span className="text-xs text-gray-400">Loading...</span>}
