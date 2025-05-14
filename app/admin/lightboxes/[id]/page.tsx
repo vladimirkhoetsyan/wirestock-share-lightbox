@@ -900,13 +900,19 @@ export default function LightboxEditPage() {
                                             alt={item.title}
                                             className="w-full h-full object-cover"
                                           />
-                                          {getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl) === "video" && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                              <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
-                                                <Video className="h-4 w-4 text-white" />
+                                          {(() => {
+                                            // Prefer the original S3 URL for type detection
+                                            const typeDetectionUrl = item.url || item.originalUrl || item.previewUrl || item.thumbnailUrl;
+                                            const detectedType = getMediaTypeFromUrl(typeDetectionUrl);
+                                            console.log('[media-item] Type detection', { typeDetectionUrl, detectedType, item });
+                                            return detectedType === "video" ? (
+                                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+                                                  <Video className="h-4 w-4 text-white" />
+                                                </div>
                                               </div>
-                                            </div>
-                                          )}
+                                            ) : null;
+                                          })()}
                                         </div>
                                         <div className="flex-grow min-w-0">
                                           <p className="font-medium truncate text-white">{item.title}</p>
@@ -915,12 +921,17 @@ export default function LightboxEditPage() {
                                             variant="outline"
                                             className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
                                           >
-                                            {((item.type ? String(item.type) : getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl)) === "image") ? (
-                                              <ImageIcon className="h-3 w-3" />
-                                            ) : (
-                                              <Video className="h-3 w-3" />
-                                            )}
-                                            {item.type ? String(item.type) : getMediaTypeFromUrl(item.previewUrl || item.originalUrl || item.thumbnailUrl) || ""}
+                                            {(() => {
+                                              const typeDetectionUrl = item.url || item.originalUrl || item.previewUrl || item.thumbnailUrl;
+                                              const detectedType = getMediaTypeFromUrl(typeDetectionUrl);
+                                              return detectedType === "image"
+                                                ? <ImageIcon className="h-3 w-3" />
+                                                : <Video className="h-3 w-3" />;
+                                            })()}
+                                            {(() => {
+                                              const typeDetectionUrl = item.url || item.originalUrl || item.previewUrl || item.thumbnailUrl;
+                                              return getMediaTypeFromUrl(typeDetectionUrl) || "";
+                                            })()}
                                           </Badge>
                                           {/* Inline analytics badges */}
                                           <div className="flex gap-2 mt-2 flex-wrap">

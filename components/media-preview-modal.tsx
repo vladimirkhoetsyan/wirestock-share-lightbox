@@ -201,6 +201,13 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, currentIndex, shareLinkId]);
 
+  // Autoplay video when modal opens and current item is a video
+  useEffect(() => {
+    if (isOpen && currentMediaType === "video") {
+      setIsPlaying(true);
+    }
+  }, [isOpen, currentMediaType, currentItem]);
+
   if (!isOpen || !currentItem) return null
 
   return (
@@ -292,11 +299,21 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                     config={{
                       file: {
                         attributes: {
-                          poster: currentItem?.thumbnailUrl || "/placeholder.svg",
+                          poster: currentItem?.previewUrl || currentItem?.thumbnailUrl || "/placeholder.svg",
                         },
                       },
                     }}
                   />
+                  {!isPlaying && (
+                    <button
+                      className="absolute inset-0 flex items-center justify-center z-10 bg-black/30 hover:bg-black/40 transition"
+                      onClick={() => setIsPlaying(true)}
+                      aria-label="Play video"
+                      tabIndex={0}
+                    >
+                      <Play className="h-20 w-20 text-white drop-shadow-lg" />
+                    </button>
+                  )}
                 </motion.div>
               ) : null}
             </AnimatePresence>

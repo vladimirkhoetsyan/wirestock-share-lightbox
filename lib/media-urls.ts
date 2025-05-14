@@ -30,6 +30,10 @@ export function getMediaTypeFromKey(key: string): 'image' | 'video' | undefined 
 const IMAGE_HANDLER_CLOUDFRONT = 'https://dhmaecov9jm1y.cloudfront.net';
 const IMAGE_HANDLER_SIGNATURE_SECRET = 'NNj74NGff2279puPNUvC';
 
+// Special CDN for 'wirestock-original-production' bucket
+const IMAGE_CDN_CLOUDFRONT = 'https://d1vcy8ih94g58p.cloudfront.net';
+const IMAGE_CDN_SIGNATURE_SECRET = '7ZvmoLffU2pJLkLZzxZu';
+
 function getServerlessImageHandlerTransformationUrl(s3Path: string, bucket: string, width: number, height: number): string {
   const request = {
     key: s3Path,
@@ -45,6 +49,23 @@ function getServerlessImageHandlerTransformationUrl(s3Path: string, bucket: stri
   const transformationRequest = Buffer.from(requestJsonData, 'utf8').toString('base64');
   const signature = getTransformationSignature(transformationRequest, IMAGE_HANDLER_SIGNATURE_SECRET);
   return `${IMAGE_HANDLER_CLOUDFRONT}/${transformationRequest}?signature=${signature}`;
+}
+
+function getImageCdnTransformationUrl(s3Path: string, bucket: string, width: number, height: number): string {
+  const request = {
+    key: s3Path,
+    bucket: bucket,
+    edits: {
+      resize: {
+        width,
+        height,
+      },
+    },
+  };
+  const requestJsonData = JSON.stringify(request);
+  const transformationRequest = Buffer.from(requestJsonData, 'utf8').toString('base64');
+  const signature = getTransformationSignature(transformationRequest, IMAGE_CDN_SIGNATURE_SECRET);
+  return `${IMAGE_CDN_CLOUDFRONT}/${transformationRequest}?signature=${signature}`;
 }
 
 function getTransformationSignature(encodedRequest: string, secret: string) {
@@ -97,6 +118,28 @@ const bucketResolvers: Record<string, MediaUrlResolver> = {
       const thumbnail = getServerlessImageHandlerTransformationUrl(key, bucket, 512, 512);
       const preview = getServerlessImageHandlerTransformationUrl(key, bucket, 1024, 1024);
       console.log('[media-urls] Special bucket (image):', { bucket, key, original, thumbnail, preview });
+      return { original, thumbnail, preview };
+    }
+    return null;
+  },
+  'wirestock-original-production': async (bucket, key, type) => {
+    const expiresInSeconds = 3600;
+    if (type === 'image') {
+      const original = await getSignedS3Url(`s3://${bucket}/${key}`, expiresInSeconds);
+      const thumbnail = getImageCdnTransformationUrl(key, bucket, 512, 512);
+      const preview = getImageCdnTransformationUrl(key, bucket, 1024, 1024);
+      console.log('[media-urls] wirestock-original-production (image):', { bucket, key, original, thumbnail, preview });
+      return { original, thumbnail, preview };
+    } else if (type === 'video') {
+      const original = await getSignedS3Url(`s3://${bucket}/${key}`, expiresInSeconds);
+      // Thumbnail: s3://${bucket}/${key}/preview.jpeg (transformed to 512x512)
+      const thumbnailKey = `${key}/preview.jpeg`;
+      const thumbnail = getImageCdnTransformationUrl(thumbnailKey, bucket, 512, 512);
+      // Preview: s3://${bucket}/${key}/{filename-without-ext}-preview.mp4
+      const filenameWithoutExt = key.split('/').pop()?.replace(/\.[^/.]+$/, '') || '';
+      const previewKey = `${key}/${filenameWithoutExt}-preview.mp4`;
+      const preview = await getSignedS3Url(`s3://${bucket}/${previewKey}`, expiresInSeconds);
+      console.log('[media-urls] wirestock-original-production (video):', { bucket, key, original, thumbnail, preview });
       return { original, thumbnail, preview };
     }
     return null;
