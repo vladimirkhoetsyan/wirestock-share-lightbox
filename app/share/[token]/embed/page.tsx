@@ -27,6 +27,7 @@ export default function ShareEmbedPage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [mounted, setMounted] = useState(false);
 
   const handleMediaClick = (index: number) => {
     setSelectedMediaIndex(index);
@@ -87,6 +88,12 @@ export default function ShareEmbedPage() {
       document.body.removeChild(script);
     };
   }, []);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (isLoading) {
     return (

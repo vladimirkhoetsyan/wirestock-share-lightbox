@@ -46,6 +46,9 @@ export default function SharePage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const lastItemRef = useRef<null | HTMLDivElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Fetch share link and lightbox from backend
   useEffect(() => {
@@ -223,6 +226,10 @@ export default function SharePage() {
     });
     if (node) observer.current.observe(node);
   }, [isLoadingMore, hasMore, loadMore]);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (isLoading) {
     return (

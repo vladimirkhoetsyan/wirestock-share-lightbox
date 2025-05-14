@@ -1,7 +1,7 @@
 "use client";
 import { Toaster } from "@/components/ui/toaster";
 
-export default function ShareLayout({ children }: { children: React.ReactNode }) {
+export default function ClientRoot({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
