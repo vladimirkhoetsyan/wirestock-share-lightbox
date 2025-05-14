@@ -262,7 +262,7 @@ export default function NotificationsPage() {
             )}
           </div>
           {loading ? (
-            <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-0 overflow-x-auto">
+            <div className="glass-card rounded-xl p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -291,14 +291,14 @@ export default function NotificationsPage() {
               </Table>
             </div>
           ) : error ? (
-            <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-8 text-center text-red-400">
+            <div className="glass-card rounded-xl p-8 text-center text-red-400">
               Error: {error} <Button variant="outline" size="sm" onClick={fetchNotifications}>Retry</Button>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-8 text-center text-white">No notifications found.</div>
+            <div className="glass-card rounded-xl p-8 text-center text-white">No notifications found.</div>
           ) : (
             <>
-            <div className="bg-[#18181b] border border-[#232329] rounded-2xl shadow-xl p-0 overflow-x-auto">
+            <div className="glass-card rounded-xl p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
