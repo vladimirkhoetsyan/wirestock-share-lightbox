@@ -239,8 +239,8 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 flex items-center justify-center"
                 >
-                  <div className="w-12 h-12 bg-popover rounded-full flex items-center justify-center">
-                    <Play className="h-6 w-6 text-foreground" />
+                  <div className="w-16 h-16 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin bg-popover flex items-center justify-center">
+                    {/* Spinner */}
                   </div>
                 </motion.div>
               ) : currentMediaType === "image" ? (

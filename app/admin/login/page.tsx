@@ -112,7 +112,6 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Hint: Use admin@example.com / password123</p>
             </div>
 
             <Button
