@@ -143,7 +143,7 @@ export default function CreateLightboxPage() {
                         <Label className="text-sm font-medium text-white">
                           Media Types <span className="text-red-400">*</span>
                         </Label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 h-10 items-center">
                           {availableTypes.map((type) => (
                             <Badge
                               key={type}
