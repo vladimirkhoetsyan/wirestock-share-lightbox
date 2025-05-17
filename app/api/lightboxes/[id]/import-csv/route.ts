@@ -45,7 +45,14 @@ export async function POST(req: NextRequest, contextPromise: Promise<{ params: {
   for (const record of records) {
     // Use mapping to get correct fields
     const s3_uri = mapping.url ? record[mapping.url] : record.s3_uri;
-    const media_type = mapping.type ? record[mapping.type] : record.media_type;
+    let media_type = mapping.type ? record[mapping.type] : record.media_type;
+
+    // Detect media_type if not present
+    if (!media_type && s3_uri) {
+      const ext = s3_uri.split('.').pop()?.toLowerCase();
+      const videoExts = ["mp4", "mov", "webm", "m4v", "avi", "mkv", "ogv", "3gp", "3g2", "hls", "m3u8"];
+      media_type = videoExts.includes(ext) ? "video" : "image";
+    }
     // Add more fields as needed
     if (!s3_uri) {
       errors.push(`Missing s3_uri in record: ${JSON.stringify(record)}`);

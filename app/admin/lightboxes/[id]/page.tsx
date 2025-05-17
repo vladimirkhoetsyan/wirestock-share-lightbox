@@ -505,45 +505,18 @@ export default function LightboxEditPage() {
 
   const handleImportMedia = async (mediaItems: MediaItem[]) => {
     if (!lightbox) return;
-
-    const token = localStorage.getItem("token");
-    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
-    if (!token || !id) return;
-
-    try {
-      // Upload each imported item to the backend, detecting media type on the fly
-      const uploadedItems = await Promise.all(
-        mediaItems.map(async (item) => {
-          // Detect media type from extension
-          const url = item.url || (item as any)?.originalUrl || (item as any)?.previewUrl || item.thumbnailUrl;
-          const ext = url?.split(".").pop()?.toLowerCase();
-          const isVideo = ext && ["mp4", "mov", "webm", "m4v", "avi", "mkv", "ogv", "3gp", "3g2", "hls", "m3u8"].includes(ext);
-          // Save to DB with detected media_type
-          const uploaded = await uploadMediaItem(id, { ...item, media_type: isVideo ? "video" : "image" }, token);
-          return { ...uploaded, type: isVideo ? "video" : "image" };
-        })
-      );
-
-      // Update state with uploaded items
-      setDisplayedMediaItems([...uploadedItems, ...displayedMediaItems].slice(0, ITEMS_PER_PAGE));
-      setLightbox({
-        ...lightbox,
-        mediaItems: [...uploadedItems, ...lightbox.mediaItems],
-      });
-      setHasMore(lightbox.mediaItems.length > ITEMS_PER_PAGE);
-      setCurrentPage(1);
-
-      toast({
-        title: "Media imported",
-        description: `${uploadedItems.length} media items have been imported successfully`,
-      });
-    } catch (e) {
-      toast({
-        title: "Error",
-        description: "Failed to import media items",
-        variant: "destructive",
-      });
-    }
+    // The backend now handles all parsing and insertion. Just update state with returned items.
+    setDisplayedMediaItems([...mediaItems, ...displayedMediaItems].slice(0, ITEMS_PER_PAGE));
+    setLightbox({
+      ...lightbox,
+      mediaItems: [...mediaItems, ...lightbox.mediaItems],
+    });
+    setHasMore(lightbox.mediaItems.length > ITEMS_PER_PAGE);
+    setCurrentPage(1);
+    toast({
+      title: "Media imported",
+      description: `${mediaItems.length} media items have been imported successfully`,
+    });
   }
 
   const handleDeleteMedia = async (id: string) => {
