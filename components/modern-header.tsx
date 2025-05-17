@@ -12,7 +12,7 @@ export default function ModernHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef(null)
-  const { notifications, unreadCount, loading, error, fetchNotifications, setNotifications } = useNotifications()
+  const { notifications, unreadCount, loading, error, fetchNotifications, setNotifications, setUnreadCount } = useNotifications()
   const unseenCount = typeof unreadCount === 'number' ? unreadCount : notifications.filter((n: any) => !n.seen).length
 
   // Close dropdown on outside click
@@ -38,6 +38,7 @@ export default function ModernHeader() {
       body: JSON.stringify({ seen: true })
     })
     setNotifications((prev: any) => prev.map((n: any) => n.id === id ? { ...n, seen: true, seenAt: new Date().toISOString() } : n))
+    setUnreadCount(prev => (typeof prev === 'number' ? Math.max(prev - 1, 0) : undefined))
   }
 
   return (
@@ -187,5 +188,5 @@ function useNotifications() {
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
   }, [])
-  return { notifications, unreadCount, loading, error, fetchNotifications, setNotifications }
+  return { notifications, unreadCount, loading, error, fetchNotifications, setNotifications, setUnreadCount }
 }
