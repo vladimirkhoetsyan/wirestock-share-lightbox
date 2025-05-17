@@ -30,7 +30,6 @@ const EXPECTED_FIELDS = [
   { key: "url", label: "URL", aliases: ["url", "s3_url", "link", "media_url"] },
   { key: "title", label: "Title", aliases: ["title", "name", "caption"] },
   { key: "description", label: "Description", aliases: ["description", "desc", "details"] },
-  { key: "type", label: "Type", aliases: ["type", "media_type", "format"] },
 ]
 
 export default function ImportMediaModal({ isOpen, onClose, onImport, lightboxId }: ImportMediaModalProps) {

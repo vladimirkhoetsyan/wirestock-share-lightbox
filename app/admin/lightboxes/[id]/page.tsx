@@ -334,7 +334,10 @@ export default function LightboxEditPage() {
       if (!res.ok) throw new Error("Failed to fetch more media items");
       const newItems = await res.json();
       if (newItems.length > 0) {
-        setDisplayedMediaItems((prev) => [...prev, ...newItems]);
+        setDisplayedMediaItems((prev) => [
+          ...prev,
+          ...newItems.map((item: any) => ({ ...item, type: item.media_type })),
+        ]);
         setCurrentPage((prev) => prev + 1);
         setHasMore(newItems.length === ITEMS_PER_PAGE);
       } else {
@@ -500,25 +503,47 @@ export default function LightboxEditPage() {
     }
   }
 
-  const handleImportMedia = (mediaItems: MediaItem[]) => {
-    if (!lightbox) return
+  const handleImportMedia = async (mediaItems: MediaItem[]) => {
+    if (!lightbox) return;
 
-    const updatedLightbox = {
-      ...lightbox,
-      mediaItems: [...mediaItems, ...lightbox.mediaItems],
+    const token = localStorage.getItem("token");
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
+    if (!token || !id) return;
+
+    try {
+      // Upload each imported item to the backend, detecting media type on the fly
+      const uploadedItems = await Promise.all(
+        mediaItems.map(async (item) => {
+          // Detect media type from extension
+          const url = item.url || (item as any)?.originalUrl || (item as any)?.previewUrl || item.thumbnailUrl;
+          const ext = url?.split(".").pop()?.toLowerCase();
+          const isVideo = ext && ["mp4", "mov", "webm", "m4v", "avi", "mkv", "ogv", "3gp", "3g2", "hls", "m3u8"].includes(ext);
+          // Save to DB with detected media_type
+          const uploaded = await uploadMediaItem(id, { ...item, media_type: isVideo ? "video" : "image" }, token);
+          return { ...uploaded, type: isVideo ? "video" : "image" };
+        })
+      );
+
+      // Update state with uploaded items
+      setDisplayedMediaItems([...uploadedItems, ...displayedMediaItems].slice(0, ITEMS_PER_PAGE));
+      setLightbox({
+        ...lightbox,
+        mediaItems: [...uploadedItems, ...lightbox.mediaItems],
+      });
+      setHasMore(lightbox.mediaItems.length > ITEMS_PER_PAGE);
+      setCurrentPage(1);
+
+      toast({
+        title: "Media imported",
+        description: `${uploadedItems.length} media items have been imported successfully`,
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to import media items",
+        variant: "destructive",
+      });
     }
-
-    setLightbox(updatedLightbox)
-
-    // Update displayed items
-    setDisplayedMediaItems([...mediaItems, ...displayedMediaItems].slice(0, ITEMS_PER_PAGE))
-    setHasMore(updatedLightbox.mediaItems.length > ITEMS_PER_PAGE)
-    setCurrentPage(1)
-
-    toast({
-      title: "Media imported",
-      description: `${mediaItems.length} media items have been imported successfully`,
-    })
   }
 
   const handleDeleteMedia = async (id: string) => {
@@ -902,9 +927,8 @@ export default function LightboxEditPage() {
                                           />
                                           {(() => {
                                             // Prefer the original S3 URL for type detection
-                                            const typeDetectionUrl = item.url || item.originalUrl || item.previewUrl || item.thumbnailUrl;
+                                            const typeDetectionUrl = item.url || (item as any)?.originalUrl || (item as any)?.previewUrl || item.thumbnailUrl;
                                             const detectedType = getMediaTypeFromUrl(typeDetectionUrl);
-                                            console.log('[media-item] Type detection', { typeDetectionUrl, detectedType, item });
                                             return detectedType === "video" ? (
                                               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                 <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
@@ -922,14 +946,14 @@ export default function LightboxEditPage() {
                                             className="mt-1 border-white/20 flex items-center gap-1 w-fit text-white"
                                           >
                                             {(() => {
-                                              const typeDetectionUrl = item.url || item.originalUrl || item.previewUrl || item.thumbnailUrl;
+                                              const typeDetectionUrl = item.url || (item as any)?.originalUrl || (item as any)?.previewUrl || item.thumbnailUrl;
                                               const detectedType = getMediaTypeFromUrl(typeDetectionUrl);
                                               return detectedType === "image"
                                                 ? <ImageIcon className="h-3 w-3" />
                                                 : <Video className="h-3 w-3" />;
                                             })()}
                                             {(() => {
-                                              const typeDetectionUrl = item.url || item.originalUrl || item.previewUrl || item.thumbnailUrl;
+                                              const typeDetectionUrl = item.url || (item as any)?.originalUrl || (item as any)?.previewUrl || item.thumbnailUrl;
                                               return getMediaTypeFromUrl(typeDetectionUrl) || "";
                                             })()}
                                           </Badge>

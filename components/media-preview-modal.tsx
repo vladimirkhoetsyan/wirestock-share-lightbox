@@ -12,6 +12,7 @@ import { recordAnalyticsEvent } from '@/lib/analytics'
 interface MediaItemWithUrls extends MediaItem {
   previewUrl?: string;
   originalUrl?: string;
+  media_type?: string;
 }
 
 interface MediaPreviewModalProps {
@@ -51,7 +52,7 @@ export default function MediaPreviewModal({ isOpen, onClose, mediaItems, initial
   const lastProgressRef = useRef(0)
 
   const currentItem = Array.isArray(mediaItems) && mediaItems.length > 0 && currentIndex >= 0 && currentIndex < mediaItems.length ? mediaItems[currentIndex] as MediaItemWithUrls : undefined
-  const currentMediaType = currentItem?.type || getMediaTypeFromUrl(currentItem?.previewUrl || currentItem?.url || currentItem?.thumbnailUrl);
+  const currentMediaType = currentItem?.type || currentItem?.media_type || getMediaTypeFromUrl(currentItem?.previewUrl || currentItem?.url || currentItem?.thumbnailUrl);
 
   // Fallback logic for image preview
   const [imageSrc, setImageSrc] = useState<string | undefined>(currentItem?.previewUrl || currentItem?.originalUrl || "/placeholder.svg");
