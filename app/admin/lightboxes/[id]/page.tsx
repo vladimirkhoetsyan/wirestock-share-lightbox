@@ -481,23 +481,34 @@ export default function LightboxEditPage() {
     const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
     if (!token || !id) return
     try {
-    const isVideo = newMediaUrl.toLowerCase().endsWith(".mp4")
+      const isVideo = newMediaUrl.toLowerCase().endsWith(".mp4")
       const newMedia = await uploadMediaItem(id, {
         s3_uri: newMediaUrl,
         media_type: isVideo ? "video" : "image",
       }, token)
-      setDisplayedMediaItems((prev) => [
-        {
-          ...newMedia,
-          thumbnailUrl: newMedia.signedUrl || "/placeholder.svg"
-        },
-        ...prev
-      ])
-    setNewMediaUrl("")
-    toast({
-      title: "Media added",
-      description: "New media item has been added to the lightbox",
-    })
+      // Fetch the full item (with URLs) from the backend
+      const res = await fetch(`/api/lightboxes/${id}/media?limit=1&cursor=${newMedia.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const [fullMedia] = await res.json();
+      if (fullMedia) {
+        setDisplayedMediaItems((prev) => [fullMedia, ...prev]);
+      }
+      setNewMediaUrl("");
+      // Fetch the latest lightbox data to update the counter
+      if (token && id) {
+        const lightboxRes = await fetch(`/api/lightboxes/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (lightboxRes.ok) {
+          const updatedLightbox = await lightboxRes.json();
+          setLightbox(updatedLightbox);
+        }
+      }
+      toast({
+        title: "Media added",
+        description: "New media item has been added to the lightbox",
+      });
     } catch {
       toast({ title: "Error", description: "Failed to add media item", variant: "destructive" })
     }
@@ -883,7 +894,7 @@ export default function LightboxEditPage() {
                                   <p className="text-sm text-gray-400">Add your first item using the form above</p>
                                 </div>
                               ) : (
-                                displayedMediaItems.map((item: any, index: number) => (
+                                displayedMediaItems.filter(Boolean).map((item: any, index: number) => (
                                   <Draggable key={item.id} draggableId={item.id} index={index}>
                                     {(provided) => (
                                       <div
