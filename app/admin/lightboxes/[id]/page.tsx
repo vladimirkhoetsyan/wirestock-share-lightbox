@@ -275,28 +275,24 @@ export default function LightboxEditPage() {
   useEffect(() => {
     const token = localStorage.getItem("token")
     const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
-    if (!token || !id) return
+    if (!token || !id) return;
+
+    setIsLoading(true); // Start loading
+
     fetchLightbox(id, token)
       .then((data) => {
-        setLightbox(data)
-        setSelectedTypes(data.types)
-        setKeywords(data.keywords.join(", "))
-        fetchMediaItems(id, token)
+        setLightbox(data);
+        setSelectedTypes(data.types);
+        setKeywords(data.keywords.join(", "));
+        return fetchMediaItems(id, token)
           .then((media) => {
             setDisplayedMediaItems(media.map((item: any) => ({ ...item, type: item.media_type })));
-            setHasMore(media.length > ITEMS_PER_PAGE)
-          })
-          .catch(() => toast({ title: "Error", description: "Failed to load media items", variant: "destructive" }))
-        // Fetch share links
-        fetchShareLinks(id, token)
-          .then((links) => {
-            setLightbox((prev: any) => ({ ...prev, shareLinks: links }))
-          })
-          .catch(() => toast({ title: "Error", description: "Failed to load share links", variant: "destructive" }))
+            setHasMore(media.length > ITEMS_PER_PAGE);
+          });
       })
-      .catch(() => toast({ title: "Error", description: "Failed to load lightbox", variant: "destructive" }))
-      .finally(() => setIsLoading(false))
-  }, [params.id])
+      .catch(() => toast({ title: "Error", description: "Failed to load lightbox or media items", variant: "destructive" }))
+      .finally(() => setIsLoading(false)); // Only set to false after both are done
+  }, [params.id]);
 
   // Infinite scroll implementation
   const lastItemRef = useCallback(
@@ -885,7 +881,13 @@ export default function LightboxEditPage() {
                         <Droppable droppableId="media-items">
                           {(provided) => (
                             <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                              {displayedMediaItems.length === 0 ? (
+                              {isLoading ? (
+                                <div className="text-center py-12">
+                                  <div className="h-16 w-16 mx-auto rounded-full bg-white/10 animate-pulse mb-4"></div>
+                                  <div className="h-6 w-1/3 mx-auto bg-white/10 rounded mb-2 animate-pulse"></div>
+                                  <div className="h-4 w-1/2 mx-auto bg-white/10 rounded animate-pulse"></div>
+                                </div>
+                              ) : displayedMediaItems.length === 0 ? (
                                 <div className="text-center py-12 border border-dashed border-white/20 rounded-xl">
                                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
                                     <ImageIcon className="h-8 w-8 text-gray-400" />

@@ -111,13 +111,11 @@ const bucketResolvers: Record<string, MediaUrlResolver> = {
       const original = await getSignedS3Url(`s3://${bucket}/${key}`, expiresInSeconds);
       const thumbnail = await getSignedS3Url(`s3://${bucket}/${key}.0000000.jpg`, expiresInSeconds);
       const preview = await getSignedS3Url(`s3://${bucket}/${key}.preview.mp4`, expiresInSeconds);
-      console.log('[media-urls] Special bucket (video):', { bucket, key, original, thumbnail, preview });
       return { original, thumbnail, preview };
     } else if (type === 'image') {
       const original = await getSignedS3Url(`s3://${bucket}/${key}`, expiresInSeconds);
       const thumbnail = getServerlessImageHandlerTransformationUrl(key, bucket, 512, 512);
       const preview = getServerlessImageHandlerTransformationUrl(key, bucket, 1024, 1024);
-      console.log('[media-urls] Special bucket (image):', { bucket, key, original, thumbnail, preview });
       return { original, thumbnail, preview };
     }
     return null;
@@ -128,7 +126,6 @@ const bucketResolvers: Record<string, MediaUrlResolver> = {
       const original = await getSignedS3Url(`s3://${bucket}/${key}`, expiresInSeconds);
       const thumbnail = getImageCdnTransformationUrl(key, bucket, 512, 512);
       const preview = getImageCdnTransformationUrl(key, bucket, 1024, 1024);
-      console.log('[media-urls] wirestock-original-production (image):', { bucket, key, original, thumbnail, preview });
       return { original, thumbnail, preview };
     } else if (type === 'video') {
       const original = await getSignedS3Url(`s3://${bucket}/${key}`, expiresInSeconds);
@@ -139,7 +136,6 @@ const bucketResolvers: Record<string, MediaUrlResolver> = {
       const filenameWithoutExt = key.split('/').pop()?.replace(/\.[^/.]+$/, '') || '';
       const previewKey = `${key}/${filenameWithoutExt}-preview.mp4`;
       const preview = await getSignedS3Url(`s3://${bucket}/${previewKey}`, expiresInSeconds);
-      console.log('[media-urls] wirestock-original-production (video):', { bucket, key, original, thumbnail, preview });
       return { original, thumbnail, preview };
     }
     return null;

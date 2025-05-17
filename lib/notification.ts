@@ -42,8 +42,6 @@ export async function createNotificationWithReceiptsAndSlack({
   }
 
   // Slack notification logic
-  console.log('SLACK_NOTIFICATIONS_ENABLED:', process.env.SLACK_NOTIFICATIONS_ENABLED);
-  console.log('SLACK_WEBHOOK_URL:', process.env.SLACK_WEBHOOK_URL);
   if (
     sendSlack &&
     process.env.SLACK_NOTIFICATIONS_ENABLED === 'true' &&
@@ -111,12 +109,8 @@ export async function createNotificationWithReceiptsAndSlack({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(message),
       });
-      console.log('Slack response status:', slackRes.status);
-      const slackText = await slackRes.text();
-      console.log('Slack response body:', slackText);
     } catch (e) {
       // Log but do not block notification creation
-      console.error('Failed to send Slack notification:', e);
     }
   }
 
