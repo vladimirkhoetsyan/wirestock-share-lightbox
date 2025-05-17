@@ -487,7 +487,7 @@ export default function LightboxEditPage() {
         media_type: isVideo ? "video" : "image",
       }, token)
       // Fetch the full item (with URLs) from the backend
-      const res = await fetch(`/api/lightboxes/${id}/media?limit=1&cursor=${newMedia.id}`, {
+      const res = await fetch(`/api/lightboxes/${id}/media?limit=1`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const [fullMedia] = await res.json();

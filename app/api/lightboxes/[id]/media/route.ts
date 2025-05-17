@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
   const cursor = searchParams.get('cursor'); // cursor is media_item id
 
   const where = { lightbox_id: id };
-  const orderBy = [{ order: 'asc' as const }, { created_at: 'asc' as const }];
+  const orderBy = [{ order: 'desc' as const }, { created_at: 'desc' as const }];
 
   let items;
   if (cursor) {

@@ -42,6 +42,13 @@ export async function POST(req: NextRequest, contextPromise: Promise<{ params: {
     importProgress[progressId] = { total, processed: 0, errors: 0 };
   }
 
+  // Before the loop, get the current max order
+  const maxOrderObj = await prisma.media_items.aggregate({
+    where: { lightbox_id: lightboxId },
+    _max: { order: true },
+  });
+  let nextOrder = (maxOrderObj._max.order ?? 0) + 1;
+
   for (const record of records) {
     // Use mapping to get correct fields
     const s3_uri = mapping.url ? record[mapping.url] : record.s3_uri;
@@ -66,6 +73,7 @@ export async function POST(req: NextRequest, contextPromise: Promise<{ params: {
           lightbox_id: lightboxId,
           s3_uri,
           media_type: media_type || null,
+          order: nextOrder++,
           // Add more fields as needed
         },
       });
